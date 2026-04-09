@@ -161,7 +161,7 @@ export const LoginView = ({ onLoginSuccess }: LoginViewProps) => {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="flex flex-col gap-4 pt-4 pb-8">
+            <CardFooter className="pt-4 pb-8">
               <Button 
                 className="w-full h-14 gap-3 text-base font-bold rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_10px_20px_rgba(var(--primary),0.2)] transition-all hover:scale-[1.02] active:scale-[0.98]" 
                 disabled={loading}
@@ -175,15 +175,6 @@ export const LoginView = ({ onLoginSuccess }: LoginViewProps) => {
                     <ArrowRight className="ml-1 h-4 w-4" />
                   </>
                 )}
-              </Button>
-              
-              <Button 
-                type="button"
-                variant="ghost" 
-                className="w-full h-10 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 hover:text-primary hover:bg-primary/5"
-                onClick={() => onLoginSuccess({ id: 'demo-admin', email: 'demo@protask.com' })}
-              >
-                Enter Demo Mode (Bypass Login)
               </Button>
             </CardFooter>
           </form>

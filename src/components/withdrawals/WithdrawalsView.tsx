@@ -11,7 +11,9 @@ import {
   CreditCard,
   Banknote,
   Smartphone,
-  ArrowRight
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { 
   Table, 
@@ -34,6 +36,7 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Withdrawal } from '@/src/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -135,129 +138,169 @@ export const WithdrawalsView = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Withdrawal Requests</h1>
-          <p className="text-muted-foreground">Manage user payout requests and transaction history.</p>
+    <div className="space-y-10">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2 text-primary font-mono text-[10px] uppercase tracking-[0.3em]">
+          <div className="h-1 w-1 rounded-full bg-primary animate-pulse" />
+          Financial Outflow Monitoring
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" className="gap-2">
-            <Filter className="h-4 w-4" />
-            Filter
-          </Button>
-          <Button className="gap-2">
-            <DollarSign className="h-4 w-4" />
-            Payout Summary
-          </Button>
-        </div>
+        <h1 className="text-4xl font-bold tracking-tight text-white">Withdrawal Requests</h1>
+        <p className="text-muted-foreground max-w-2xl">
+          Authorize capital distribution, validate payment destinations, and maintain transaction integrity.
+        </p>
       </div>
 
       <Tabs defaultValue="pending" onValueChange={setActiveTab} className="w-full">
-        <div className="flex items-center justify-between">
-          <TabsList className="bg-muted/50 p-1">
-            <TabsTrigger value="pending" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <Clock className="h-4 w-4" />
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <TabsList className="bg-black/40 border border-white/5 p-1 h-12">
+            <TabsTrigger value="pending" className="gap-2 h-10 px-6 data-[state=active]:bg-primary data-[state=active]:text-black font-mono text-[10px] uppercase tracking-widest transition-all">
+              <Clock className="h-3 w-3" />
               Pending
-              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">
+              <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-[10px] bg-white/10 text-white border-none">
                 {withdrawals.filter(w => w.status === 'pending').length}
               </Badge>
             </TabsTrigger>
-            <TabsTrigger value="approved" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <CheckCircle2 className="h-4 w-4" />
+            <TabsTrigger value="approved" className="gap-2 h-10 px-6 data-[state=active]:bg-emerald-500 data-[state=active]:text-black font-mono text-[10px] uppercase tracking-widest transition-all">
+              <CheckCircle2 className="h-3 w-3" />
               Processed
             </TabsTrigger>
-            <TabsTrigger value="rejected" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <XCircle className="h-4 w-4" />
+            <TabsTrigger value="rejected" className="gap-2 h-10 px-6 data-[state=active]:bg-rose-500 data-[state=active]:text-black font-mono text-[10px] uppercase tracking-widest transition-all">
+              <XCircle className="h-3 w-3" />
               Rejected
             </TabsTrigger>
           </TabsList>
-          <div className="relative w-full max-w-xs hidden sm:block">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input placeholder="Search withdrawals..." className="pl-10 h-9" />
+          
+          <div className="flex items-center gap-3">
+            <div className="relative w-full max-w-xs group">
+              <div className="absolute -inset-1 bg-primary/20 blur-sm rounded-lg opacity-0 group-focus-within:opacity-100 transition-opacity" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
+              <Input placeholder="Search transactions..." className="pl-10 h-10 bg-[#0d0d0d] border-white/5 focus:border-primary/50 transition-all relative z-10 font-mono text-xs" />
+            </div>
+            <Button variant="ghost" className="h-10 w-10 p-0 border border-white/5 text-muted-foreground/60 hover:text-white hover:bg-white/5">
+              <Filter className="h-4 w-4" />
+            </Button>
           </div>
         </div>
 
-        <TabsContent value={activeTab} className="mt-6">
-          <Card className="border-none bg-card/50 shadow-xl shadow-black/5 backdrop-blur-sm">
-            <CardContent className="p-0">
-              <div className="rounded-xl overflow-hidden">
-                <Table>
-                  <TableHeader className="bg-muted/50">
-                    <TableRow>
-                      <TableHead>User</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Method</TableHead>
-                      <TableHead>Details</TableHead>
-                      <TableHead>Requested</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredWithdrawals.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                          No {activeTab} withdrawal requests.
+        <TabsContent value={activeTab} className="mt-8">
+          <Card className="border-white/5 bg-[#0d0d0d] shadow-2xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-black/40 border-b border-white/5">
+                  <TableRow className="hover:bg-transparent border-none">
+                    <TableHead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60 py-4">Personnel</TableHead>
+                    <TableHead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60 py-4">Capital Amount</TableHead>
+                    <TableHead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60 py-4">Transfer Method</TableHead>
+                    <TableHead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60 py-4">Destination Data</TableHead>
+                    <TableHead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60 py-4">Timestamp</TableHead>
+                    <TableHead className="text-right text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60 py-4">Operations</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    Array(5).fill(0).map((_, i) => (
+                      <TableRow key={i} className="border-white/5">
+                        <TableCell colSpan={6} className="py-8">
+                          <div className="flex items-center gap-4">
+                            <Skeleton className="h-10 w-10 rounded-full bg-white/5" />
+                            <div className="space-y-2 flex-1">
+                              <Skeleton className="h-4 w-1/3 bg-white/5" />
+                              <Skeleton className="h-3 w-1/4 bg-white/5" />
+                            </div>
+                          </div>
                         </TableCell>
                       </TableRow>
-                    ) : (
-                      filteredWithdrawals.map((withdrawal) => (
-                        <TableRow key={withdrawal.id} className="hover:bg-muted/30 transition-colors">
-                          <TableCell>
-                            <div className="flex flex-col">
-                              <span className="font-semibold text-sm">{withdrawal.profiles?.full_name || 'N/A'}</span>
-                              <span className="text-xs text-muted-foreground">{withdrawal.profiles?.email}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1 font-mono font-bold text-rose-600">
-                              <DollarSign className="h-3 w-3" />
-                              {withdrawal.amount.toFixed(2)}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2 text-sm">
+                    ))
+                  ) : filteredWithdrawals.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-60 text-center text-muted-foreground/40 font-mono text-xs uppercase tracking-widest">
+                        No {activeTab} withdrawal requests detected
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredWithdrawals.map((withdrawal) => (
+                      <TableRow key={withdrawal.id} className="border-white/5 hover:bg-white/[0.02] transition-colors group">
+                        <TableCell className="py-4">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-sm text-white group-hover:text-primary transition-colors">{withdrawal.profiles?.full_name || 'Anonymous'}</span>
+                            <span className="text-[10px] font-mono text-muted-foreground/60">{withdrawal.profiles?.email}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1.5 font-mono font-bold text-rose-500 text-sm">
+                            <DollarSign className="h-3 w-3 opacity-50" />
+                            {withdrawal.amount.toFixed(2)}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2 text-[10px] font-mono text-white/80 uppercase tracking-wider">
+                            <div className="p-1.5 rounded-md bg-white/5 border border-white/5">
                               {getMethodIcon(withdrawal.payment_method)}
-                              {withdrawal.payment_method}
                             </div>
-                          </TableCell>
-                          <TableCell>
-                            <code className="rounded bg-muted px-2 py-1 text-xs text-muted-foreground">
-                              {withdrawal.payment_details}
-                            </code>
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {new Date(withdrawal.created_at).toLocaleString()}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-48">
-                                <DropdownMenuLabel>Payout Actions</DropdownMenuLabel>
-                                <DropdownMenuItem className="gap-2 text-emerald-600" onClick={() => handleApprove(withdrawal.id)}>
-                                  <CheckCircle2 className="h-4 w-4" /> Approve & Pay
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="gap-2 text-destructive" onClick={() => handleReject(withdrawal.id)}>
-                                  <XCircle className="h-4 w-4" /> Reject Request
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem className="gap-2">
-                                  <ArrowRight className="h-4 w-4" /> View User History
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+                            {withdrawal.payment_method}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <code className="rounded-md bg-black border border-white/5 px-2 py-1 text-[10px] font-mono font-bold text-primary/80">
+                            {withdrawal.payment_details}
+                          </code>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2 text-[10px] font-mono text-muted-foreground/60">
+                              <Clock className="h-3 w-3 opacity-40" />
+                              {new Date(withdrawal.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="hover:bg-white/5 text-muted-foreground/60 hover:text-white">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56 bg-black border-white/10 text-white">
+                              <DropdownMenuLabel className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60">Payout Operations</DropdownMenuLabel>
+                              <DropdownMenuSeparator className="bg-white/5" />
+                              <DropdownMenuItem 
+                                className="gap-3 text-xs font-medium focus:bg-emerald-500/10 focus:text-emerald-500 cursor-pointer text-emerald-500/80"
+                                onClick={() => handleApprove(withdrawal)}
+                              >
+                                <CheckCircle2 className="h-4 w-4 opacity-60" /> Authorize & Process
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                className="gap-3 text-xs font-medium focus:bg-rose-500/10 focus:text-rose-500 cursor-pointer text-rose-500/80"
+                                onClick={() => handleReject(withdrawal.id)}
+                              >
+                                <XCircle className="h-4 w-4 opacity-60" /> Deny Request
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator className="bg-white/5" />
+                              <DropdownMenuItem className="gap-3 text-xs font-medium focus:bg-white/5 focus:text-primary cursor-pointer">
+                                <ArrowRight className="h-4 w-4 opacity-60" /> Audit User History
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="bg-black/40 border-t border-white/5 p-4 flex items-center justify-between">
+              <p className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest">
+                Showing <span className="text-white font-bold">{filteredWithdrawals.length}</span> of <span className="text-white font-bold">{withdrawals.length}</span> transaction records
+              </p>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 border border-white/5 text-muted-foreground/40 hover:text-white hover:bg-white/5" disabled>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 border border-white/5 text-muted-foreground/40 hover:text-white hover:bg-white/5" disabled>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               </div>
-            </CardContent>
+            </div>
           </Card>
         </TabsContent>
       </Tabs>

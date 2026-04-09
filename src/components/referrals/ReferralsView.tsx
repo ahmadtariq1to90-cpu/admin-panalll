@@ -8,7 +8,10 @@ import {
   DollarSign, 
   UserPlus,
   BarChart3,
-  PieChart
+  PieChart,
+  ChevronLeft,
+  ChevronRight,
+  Clock
 } from 'lucide-react';
 import { 
   Table, 
@@ -22,6 +25,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Referral } from '@/src/types';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/src/lib/supabase';
@@ -72,124 +76,140 @@ export const ReferralsView = () => {
   }, []);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Referral System</h1>
-          <p className="text-muted-foreground">Track user invitations and commission payouts (10%).</p>
+    <div className="space-y-10">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2 text-primary font-mono text-[10px] uppercase tracking-[0.3em]">
+          <div className="h-1 w-1 rounded-full bg-primary animate-pulse" />
+          Network Expansion Analysis
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" className="gap-2">
-            <BarChart3 className="h-4 w-4" />
-            Analytics
-          </Button>
-          <Button className="gap-2">
-            <UserPlus className="h-4 w-4" />
-            Invite User
-          </Button>
-        </div>
+        <h1 className="text-4xl font-bold tracking-tight text-white">Referral Ecosystem</h1>
+        <p className="text-muted-foreground max-w-2xl">
+          Monitor the viral growth engine, track multi-level commission distribution, and analyze network density.
+        </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="border-none bg-card/50 shadow-xl shadow-black/5 backdrop-blur-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Referrals</CardTitle>
-            <UsersRound className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{loading ? "..." : stats.totalReferrals}</div>
-            <p className="text-xs text-muted-foreground">Successful invitations</p>
-          </CardContent>
-        </Card>
-        <Card className="border-none bg-card/50 shadow-xl shadow-black/5 backdrop-blur-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Commission Paid</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{loading ? "..." : `$${stats.totalCommission.toFixed(2)}`}</div>
-            <p className="text-xs text-muted-foreground">10% of task rewards</p>
-          </CardContent>
-        </Card>
-        <Card className="border-none bg-card/50 shadow-xl shadow-black/5 backdrop-blur-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Referral Rate</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{loading ? "..." : `${stats.referralRate.toFixed(1)}%`}</div>
-            <p className="text-xs text-muted-foreground">Users who invited others</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="border-none bg-card/50 shadow-xl shadow-black/5 backdrop-blur-sm">
-        <CardHeader className="pb-0">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">Recent Referrals</CardTitle>
-            <div className="relative w-full max-w-xs">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input placeholder="Search referrals..." className="pl-10 h-9" />
+      <div className="grid gap-6 md:grid-cols-3">
+        {[
+          { label: 'Total Network Nodes', value: stats.totalReferrals, sub: 'Successful invitations', icon: UsersRound, color: 'primary' },
+          { label: 'Commission Liquidity', value: `$${stats.totalCommission.toFixed(2)}`, sub: '10% task reward share', icon: DollarSign, color: 'emerald-500' },
+          { label: 'Network Density', value: `${stats.referralRate.toFixed(1)}%`, sub: 'Active inviter ratio', icon: TrendingUp, color: 'blue-500' }
+        ].map((stat, i) => (
+          <Card key={i} className="group relative border-white/5 bg-[#0d0d0d] p-6 overflow-hidden">
+            <div className={`absolute -right-4 -top-4 h-24 w-24 rounded-full bg-${stat.color}/10 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity`} />
+            <div className="relative z-10 space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60">{stat.label}</span>
+                <stat.icon className={`h-4 w-4 text-${stat.color} opacity-60`} />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-3xl font-bold tracking-tight text-white">
+                  {loading ? (
+                    <div className="h-8 w-16 bg-white/5 animate-pulse rounded" />
+                  ) : stat.value}
+                </h3>
+                <p className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest">{stat.sub}</p>
+              </div>
             </div>
+          </Card>
+        ))}
+      </div>
+
+      <Card className="border-white/5 bg-[#0d0d0d] shadow-2xl overflow-hidden">
+        <div className="p-6 border-b border-white/5 bg-black/40 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Network Propagation Log</h3>
+            <p className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest">Real-time node connection telemetry</p>
           </div>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <div className="rounded-xl border bg-background/50 overflow-hidden">
-            <Table>
-              <TableHeader className="bg-muted/50">
-                <TableRow>
-                  <TableHead>Referrer (Inviter)</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
-                  <TableHead>Referred (Invitee)</TableHead>
-                  <TableHead>Commission Earned</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {referrals.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                      No referrals found.
+          <div className="relative w-full max-w-xs group">
+            <div className="absolute -inset-1 bg-primary/20 blur-sm rounded-lg opacity-0 group-focus-within:opacity-100 transition-opacity" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
+            <Input placeholder="Search network..." className="pl-10 h-10 bg-[#0d0d0d] border-white/5 focus:border-primary/50 transition-all relative z-10 font-mono text-xs" />
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader className="bg-black/20">
+              <TableRow className="hover:bg-transparent border-white/5">
+                <TableHead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60 py-4">Source Node (Inviter)</TableHead>
+                <TableHead className="w-[50px]"></TableHead>
+                <TableHead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60 py-4">Target Node (Invitee)</TableHead>
+                <TableHead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60 py-4">Yield (Commission)</TableHead>
+                <TableHead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60 py-4">Timestamp</TableHead>
+                <TableHead className="text-right text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60 py-4">Analysis</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                Array(5).fill(0).map((_, i) => (
+                  <TableRow key={i} className="border-white/5">
+                    <TableCell colSpan={6} className="py-6">
+                      <Skeleton className="h-4 w-full bg-white/5" />
                     </TableCell>
                   </TableRow>
-                ) : (
-                  referrals.map((referral) => (
-                    <TableRow key={referral.id} className="hover:bg-muted/30 transition-colors">
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-sm">{referral.referrer?.full_name || 'N/A'}</span>
-                          <span className="text-xs text-muted-foreground">{referral.referrer?.email}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-sm">{referral.referred?.full_name || 'N/A'}</span>
-                          <span className="text-xs text-muted-foreground">{referral.referred?.email}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1 font-mono font-bold text-emerald-600">
-                          <DollarSign className="h-3 w-3" />
-                          {referral.commission_earned.toFixed(2)}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {new Date(referral.created_at).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm">View Chain</Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                ))
+              ) : referrals.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-60 text-center text-muted-foreground/40 font-mono text-xs uppercase tracking-widest">
+                    No network expansion detected in current cycle
+                  </TableCell>
+                </TableRow>
+              ) : (
+                referrals.map((referral) => (
+                  <TableRow key={referral.id} className="border-white/5 hover:bg-white/[0.02] transition-colors group">
+                    <TableCell className="py-4">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-sm text-white group-hover:text-primary transition-colors">{referral.referrer?.full_name || 'Anonymous'}</span>
+                        <span className="text-[10px] font-mono text-muted-foreground/60">{referral.referrer?.email}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <ArrowRight className="h-3 w-3 text-muted-foreground/40 group-hover:text-primary transition-colors" />
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="font-bold text-sm text-white/80">{referral.referred?.full_name || 'Anonymous'}</span>
+                        <span className="text-[10px] font-mono text-muted-foreground/60">{referral.referred?.email}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5 font-mono font-bold text-emerald-500 text-sm">
+                        <DollarSign className="h-3 w-3 opacity-50" />
+                        {referral.commission_earned.toFixed(2)}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-[10px] font-mono text-muted-foreground/60">
+                        {new Date(referral.created_at).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' })}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 hover:text-primary hover:bg-primary/5 border border-white/5"
+                      >
+                        Trace Chain
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+        <div className="bg-black/40 border-t border-white/5 p-4 flex items-center justify-between">
+          <p className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest">
+            Network Propagation Index: <span className="text-white font-bold">{referrals.length}</span> active connections
+          </p>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 border border-white/5 text-muted-foreground/40 hover:text-white hover:bg-white/5" disabled>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 border border-white/5 text-muted-foreground/40 hover:text-white hover:bg-white/5" disabled>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
           </div>
-        </CardContent>
+        </div>
       </Card>
     </div>
   );

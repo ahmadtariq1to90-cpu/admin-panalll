@@ -8,7 +8,10 @@ import {
   Eye, 
   ExternalLink,
   CheckSquare,
-  AlertCircle
+  AlertCircle,
+  DollarSign,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { 
   Table, 
@@ -32,6 +35,8 @@ import {
   DialogTitle, 
   DialogTrigger 
 } from '@/components/ui/dialog';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { TaskSubmission } from '@/src/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -144,175 +149,251 @@ export const TasksView = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Tasks Management</h1>
-          <p className="text-muted-foreground">Review and approve user task submissions.</p>
+    <div className="space-y-10">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2 text-primary font-mono text-[10px] uppercase tracking-[0.3em]">
+          <div className="h-1 w-1 rounded-full bg-primary animate-pulse" />
+          Validation Protocol Active
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" className="gap-2">
-            <CheckSquare className="h-4 w-4" />
-            Manage Tasks
-          </Button>
-          <Button className="gap-2">
-            <AlertCircle className="h-4 w-4" />
-            Review Guidelines
-          </Button>
-        </div>
+        <h1 className="text-4xl font-bold tracking-tight text-white">Task Submissions</h1>
+        <p className="text-muted-foreground max-w-2xl">
+          Review personnel performance, validate proof of completion, and authorize reward distribution.
+        </p>
       </div>
 
       <Tabs defaultValue="pending" onValueChange={setActiveTab} className="w-full">
-        <div className="flex items-center justify-between">
-          <TabsList className="bg-muted/50 p-1">
-            <TabsTrigger value="pending" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <Clock className="h-4 w-4" />
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <TabsList className="bg-black/40 border border-white/5 p-1 h-12">
+            <TabsTrigger value="pending" className="gap-2 h-10 px-6 data-[state=active]:bg-primary data-[state=active]:text-black font-mono text-[10px] uppercase tracking-widest transition-all">
+              <Clock className="h-3 w-3" />
               Pending
-              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">
+              <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-[10px] bg-white/10 text-white border-none">
                 {submissions.filter(s => s.status === 'pending').length}
               </Badge>
             </TabsTrigger>
-            <TabsTrigger value="approved" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <CheckCircle2 className="h-4 w-4" />
+            <TabsTrigger value="approved" className="gap-2 h-10 px-6 data-[state=active]:bg-emerald-500 data-[state=active]:text-black font-mono text-[10px] uppercase tracking-widest transition-all">
+              <CheckCircle2 className="h-3 w-3" />
               Approved
             </TabsTrigger>
-            <TabsTrigger value="rejected" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <XCircle className="h-4 w-4" />
+            <TabsTrigger value="rejected" className="gap-2 h-10 px-6 data-[state=active]:bg-rose-500 data-[state=active]:text-black font-mono text-[10px] uppercase tracking-widest transition-all">
+              <XCircle className="h-3 w-3" />
               Rejected
             </TabsTrigger>
           </TabsList>
-          <div className="relative w-full max-w-xs hidden sm:block">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input placeholder="Search submissions..." className="pl-10 h-9" />
+          
+          <div className="flex items-center gap-3">
+            <div className="relative w-full max-w-xs group">
+              <div className="absolute -inset-1 bg-primary/20 blur-sm rounded-lg opacity-0 group-focus-within:opacity-100 transition-opacity" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
+              <Input placeholder="Search telemetry..." className="pl-10 h-10 bg-[#0d0d0d] border-white/5 focus:border-primary/50 transition-all relative z-10 font-mono text-xs" />
+            </div>
+            <Button variant="ghost" className="h-10 w-10 p-0 border border-white/5 text-muted-foreground/60 hover:text-white hover:bg-white/5">
+              <Filter className="h-4 w-4" />
+            </Button>
           </div>
         </div>
 
-        <TabsContent value={activeTab} className="mt-6">
-          <Card className="border-none bg-card/50 shadow-xl shadow-black/5 backdrop-blur-sm">
-            <CardContent className="p-0">
-              <div className="rounded-xl overflow-hidden">
-                <Table>
-                  <TableHeader className="bg-muted/50">
-                    <TableRow>
-                      <TableHead>User</TableHead>
-                      <TableHead>Task</TableHead>
-                      <TableHead>Reward</TableHead>
-                      <TableHead>Submitted</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredSubmissions.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
-                          No {activeTab} submissions found.
+        <TabsContent value={activeTab} className="mt-8">
+          <Card className="border-white/5 bg-[#0d0d0d] shadow-2xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-black/40 border-b border-white/5">
+                  <TableRow className="hover:bg-transparent border-none">
+                    <TableHead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60 py-4">Personnel</TableHead>
+                    <TableHead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60 py-4">Objective</TableHead>
+                    <TableHead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60 py-4">Reward Value</TableHead>
+                    <TableHead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60 py-4">Timestamp</TableHead>
+                    <TableHead className="text-right text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60 py-4">Verification</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    Array(5).fill(0).map((_, i) => (
+                      <TableRow key={i} className="border-white/5">
+                        <TableCell colSpan={5} className="py-8">
+                          <div className="flex items-center gap-4">
+                            <Skeleton className="h-10 w-10 rounded-full bg-white/5" />
+                            <div className="space-y-2 flex-1">
+                              <Skeleton className="h-4 w-1/3 bg-white/5" />
+                              <Skeleton className="h-3 w-1/4 bg-white/5" />
+                            </div>
+                          </div>
                         </TableCell>
                       </TableRow>
-                    ) : (
-                      filteredSubmissions.map((submission) => (
-                        <TableRow key={submission.id} className="hover:bg-muted/30 transition-colors">
-                          <TableCell>
-                            <div className="flex flex-col">
-                              <span className="font-semibold text-sm">{submission.profiles?.full_name || 'N/A'}</span>
-                              <span className="text-xs text-muted-foreground">{submission.profiles?.email}</span>
+                    ))
+                  ) : filteredSubmissions.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-60 text-center text-muted-foreground/40 font-mono text-xs uppercase tracking-widest">
+                        No {activeTab} submissions detected in the stream
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredSubmissions.map((submission) => (
+                      <TableRow key={submission.id} className="border-white/5 hover:bg-white/[0.02] transition-colors group">
+                        <TableCell className="py-4">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-sm text-white group-hover:text-primary transition-colors">{submission.profiles?.full_name || 'Anonymous'}</span>
+                            <span className="text-[10px] font-mono text-muted-foreground/60">{submission.profiles?.email}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium text-sm text-white/80">{submission.tasks?.title}</span>
+                            <span className="text-[10px] font-mono text-muted-foreground/40 line-clamp-1 uppercase tracking-tight">{submission.tasks?.description}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1.5 font-mono font-bold text-emerald-500 text-sm">
+                            <DollarSign className="h-3 w-3 opacity-50" />
+                            {submission.tasks?.reward.toFixed(2)}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2 text-[10px] font-mono text-muted-foreground/60">
+                              <Clock className="h-3 w-3 opacity-40" />
+                              {new Date(submission.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
                             </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-col">
-                              <span className="font-medium text-sm">{submission.tasks?.title}</span>
-                              <span className="text-xs text-muted-foreground line-clamp-1">{submission.tasks?.description}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="font-mono text-emerald-600 border-emerald-200 bg-emerald-50">
-                              +${submission.tasks?.reward.toFixed(2)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {new Date(submission.created_at).toLocaleString()}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button variant="outline" size="sm" className="gap-2" onClick={() => setSelectedSubmission(submission)}>
-                                  <Eye className="h-4 w-4" />
-                                  Review
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-2xl">
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-9 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 hover:text-primary hover:bg-primary/5 border border-white/5"
+                                onClick={() => setSelectedSubmission(submission)}
+                              >
+                                <Eye className="h-3 w-3 mr-2" />
+                                Inspect
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-3xl bg-[#0d0d0d] border-white/10 text-white p-0 overflow-hidden">
+                              <div className="p-8 space-y-8">
                                 <DialogHeader>
-                                  <DialogTitle>Review Task Submission</DialogTitle>
-                                  <DialogDescription>
-                                    Review the proof provided by {submission.profiles?.full_name} for the task "{submission.tasks?.title}".
+                                  <div className="flex items-center gap-2 text-primary font-mono text-[10px] uppercase tracking-[0.3em] mb-2">
+                                    <div className="h-1 w-1 rounded-full bg-primary animate-pulse" />
+                                    Submission Inspection
+                                  </div>
+                                  <DialogTitle className="text-2xl font-bold">Verification Protocol</DialogTitle>
+                                  <DialogDescription className="text-muted-foreground/60 font-mono text-xs uppercase tracking-wider">
+                                    Reviewing telemetry for {submission.profiles?.full_name}
                                   </DialogDescription>
                                 </DialogHeader>
-                                <div className="grid gap-6 py-4 md:grid-cols-2">
-                                  <div className="space-y-4">
-                                    <div className="space-y-2">
-                                      <h4 className="text-sm font-semibold">User Details</h4>
-                                      <div className="rounded-lg border p-3 text-sm space-y-1">
-                                        <p><span className="text-muted-foreground">Name:</span> {submission.profiles?.full_name}</p>
-                                        <p><span className="text-muted-foreground">Email:</span> {submission.profiles?.email}</p>
-                                        <p><span className="text-muted-foreground">Current Balance:</span> ${submission.profiles?.balance.toFixed(2)}</p>
+
+                                <div className="grid gap-8 md:grid-cols-2">
+                                  <div className="space-y-6">
+                                    <div className="space-y-3">
+                                      <h4 className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground/60">Personnel Profile</h4>
+                                      <div className="rounded-xl bg-black border border-white/5 p-4 space-y-3">
+                                        <div className="flex items-center gap-3">
+                                          <Avatar className="h-10 w-10 border border-white/10">
+                                            <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${submission.user_id}`} />
+                                            <AvatarFallback className="bg-primary/10 text-primary">{submission.profiles?.full_name?.charAt(0)}</AvatarFallback>
+                                          </Avatar>
+                                          <div className="flex flex-col">
+                                            <p className="text-sm font-bold">{submission.profiles?.full_name}</p>
+                                            <p className="text-[10px] font-mono text-muted-foreground/60">{submission.profiles?.email}</p>
+                                          </div>
+                                        </div>
+                                        <div className="pt-3 border-t border-white/5 flex items-center justify-between">
+                                          <span className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest">Current Balance</span>
+                                          <span className="text-sm font-mono font-bold text-emerald-500">${submission.profiles?.balance.toFixed(2)}</span>
+                                        </div>
                                       </div>
                                     </div>
-                                    <div className="space-y-2">
-                                      <h4 className="text-sm font-semibold">Task Details</h4>
-                                      <div className="rounded-lg border p-3 text-sm space-y-1">
-                                        <p><span className="text-muted-foreground">Title:</span> {submission.tasks?.title}</p>
-                                        <p><span className="text-muted-foreground">Reward:</span> ${submission.tasks?.reward.toFixed(2)}</p>
-                                        <p className="text-muted-foreground italic mt-2">{submission.tasks?.description}</p>
+
+                                    <div className="space-y-3">
+                                      <h4 className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground/60">Objective Data</h4>
+                                      <div className="rounded-xl bg-black border border-white/5 p-4 space-y-3">
+                                        <div>
+                                          <p className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest mb-1">Title</p>
+                                          <p className="text-sm font-bold text-white">{submission.tasks?.title}</p>
+                                        </div>
+                                        <div>
+                                          <p className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest mb-1">Reward</p>
+                                          <p className="text-sm font-mono font-bold text-primary">${submission.tasks?.reward.toFixed(2)}</p>
+                                        </div>
+                                        <div>
+                                          <p className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest mb-1">Description</p>
+                                          <p className="text-xs text-muted-foreground/80 leading-relaxed">{submission.tasks?.description}</p>
+                                        </div>
                                       </div>
                                     </div>
                                   </div>
-                                  <div className="space-y-2">
-                                    <h4 className="text-sm font-semibold">Proof of Completion</h4>
-                                    <div className="relative aspect-video rounded-lg border overflow-hidden bg-muted group">
+
+                                  <div className="space-y-3">
+                                    <h4 className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground/60">Visual Evidence</h4>
+                                    <div className="relative aspect-[4/5] rounded-xl border border-white/5 overflow-hidden bg-black group">
                                       {submission.proof_url ? (
                                         <>
                                           <img 
                                             src={submission.proof_url} 
                                             alt="Proof" 
-                                            className="h-full w-full object-cover"
+                                            className="h-full w-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
                                             referrerPolicy="no-referrer"
                                           />
+                                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                                           <a 
                                             href={submission.proof_url} 
                                             target="_blank" 
                                             rel="noreferrer"
-                                            className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            className="absolute bottom-4 right-4 h-10 w-10 rounded-full bg-primary flex items-center justify-center text-black shadow-2xl opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0"
                                           >
-                                            <ExternalLink className="h-8 w-8 text-white" />
+                                            <ExternalLink className="h-5 w-5" />
                                           </a>
                                         </>
                                       ) : (
-                                        <div className="flex h-full items-center justify-center text-muted-foreground">
-                                          No proof image provided
+                                        <div className="flex flex-col h-full items-center justify-center text-muted-foreground/20 gap-4">
+                                          <AlertCircle className="h-12 w-12" />
+                                          <p className="text-[10px] font-mono uppercase tracking-[0.2em]">No Evidence Found</p>
                                         </div>
                                       )}
                                     </div>
                                   </div>
                                 </div>
-                                <DialogFooter className="gap-2 sm:gap-0">
-                                  <Button variant="outline" className="gap-2 text-rose-600 hover:bg-rose-50 hover:text-rose-700" onClick={() => handleReject(submission.id)}>
-                                    <XCircle className="h-4 w-4" />
-                                    Reject Submission
-                                  </Button>
-                                  <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700" onClick={() => handleApprove(submission.id)}>
-                                    <CheckCircle2 className="h-4 w-4" />
-                                    Approve & Credit
-                                  </Button>
-                                </DialogFooter>
-                              </DialogContent>
-                            </Dialog>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+                              </div>
+
+                              <div className="bg-black/60 border-t border-white/5 p-6 flex items-center justify-end gap-3">
+                                <Button 
+                                  variant="ghost" 
+                                  className="h-12 px-8 text-[10px] font-bold uppercase tracking-widest text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 border border-rose-500/20" 
+                                  onClick={() => handleReject(submission.id)}
+                                >
+                                  <XCircle className="h-4 w-4 mr-2" />
+                                  Reject
+                                </Button>
+                                <Button 
+                                  className="h-12 px-8 text-[10px] font-bold uppercase tracking-widest bg-emerald-500 text-black hover:bg-emerald-400" 
+                                  onClick={() => handleApprove(submission)}
+                                >
+                                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                                  Authorize & Credit
+                                </Button>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="bg-black/40 border-t border-white/5 p-4 flex items-center justify-between">
+              <p className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest">
+                Showing <span className="text-white font-bold">{filteredSubmissions.length}</span> of <span className="text-white font-bold">{submissions.length}</span> telemetry records
+              </p>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 border border-white/5 text-muted-foreground/40 hover:text-white hover:bg-white/5" disabled>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 border border-white/5 text-muted-foreground/40 hover:text-white hover:bg-white/5" disabled>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               </div>
-            </CardContent>
+            </div>
           </Card>
         </TabsContent>
       </Tabs>
