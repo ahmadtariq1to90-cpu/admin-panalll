@@ -1,0 +1,5 @@
+{
+  "name": "ProTask Admin Panel",
+  "description": "A premium, advanced admin dashboard for managing users, tasks, withdrawals, and referrals with real-time Supabase integration.",
+  "requestFramePermissions": []
+}
