@@ -77,8 +77,80 @@ const StatCard = ({ title, value, icon: Icon, description, trend, delay = 0 }: S
 );
 
 import { cn } from '@/lib/utils';
+import { supabase } from '@/src/lib/supabase';
 
 export const DashboardView = () => {
+  const [stats, setStats] = React.useState({
+    totalUsers: 0,
+    pendingTasks: 0,
+    pendingWithdrawals: 0,
+    totalEarnings: 0,
+  });
+  const [loading, setLoading] = React.useState(true);
+  const [recentActivities, setRecentActivities] = React.useState<any[]>([]);
+
+  React.useEffect(() => {
+    const fetchStats = async () => {
+      setLoading(true);
+      try {
+        // Fetch Total Users
+        const { count: userCount } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true });
+
+        // Fetch Pending Tasks
+        const { count: taskCount } = await supabase
+          .from('task_submissions')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'pending');
+
+        // Fetch Pending Withdrawals
+        const { count: withdrawalCount } = await supabase
+          .from('withdrawals')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'pending');
+
+        // Fetch Total Earnings (Sum of all approved task rewards)
+        // This is a bit complex with just client-side, but we can estimate or fetch a summary
+        const { data: earningsData } = await supabase
+          .from('profiles')
+          .select('balance');
+        
+        const totalBalance = earningsData?.reduce((acc, curr) => acc + (curr.balance || 0), 0) || 0;
+
+        setStats({
+          totalUsers: userCount || 0,
+          pendingTasks: taskCount || 0,
+          pendingWithdrawals: withdrawalCount || 0,
+          totalEarnings: totalBalance,
+        });
+
+        // Fetch Recent Activities (Submissions)
+        const { data: submissions } = await supabase
+          .from('task_submissions')
+          .select('*, profiles(full_name), tasks(title)')
+          .order('created_at', { ascending: false })
+          .limit(5);
+
+        if (submissions) {
+          setRecentActivities(submissions.map(s => ({
+            user: s.profiles?.full_name || 'Unknown',
+            action: `Submitted "${s.tasks?.title || 'Task'}"`,
+            time: new Date(s.created_at).toLocaleTimeString(),
+            amount: s.status === 'approved' ? `+$${s.tasks?.reward}` : null
+          })));
+        }
+
+      } catch (error) {
+        console.error('Error fetching dashboard stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
   return (
     <div className="space-y-8">
       <div>
@@ -89,15 +161,15 @@ export const DashboardView = () => {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Users"
-          value="1,284"
+          value={loading ? "..." : stats.totalUsers.toLocaleString()}
           icon={Users}
-          description="Active users this month"
+          description="Registered on platform"
           trend={{ value: "+12.5%", isUp: true }}
           delay={0.1}
         />
         <StatCard
           title="Pending Tasks"
-          value="42"
+          value={loading ? "..." : stats.pendingTasks}
           icon={CheckSquare}
           description="Awaiting review"
           trend={{ value: "-5.2%", isUp: false }}
@@ -105,17 +177,17 @@ export const DashboardView = () => {
         />
         <StatCard
           title="Pending Withdrawals"
-          value="18"
+          value={loading ? "..." : stats.pendingWithdrawals}
           icon={Wallet}
           description="Processing requests"
           trend={{ value: "+8.1%", isUp: true }}
           delay={0.3}
         />
         <StatCard
-          title="Total Earnings"
-          value="$12,450"
+          title="Total User Balance"
+          value={loading ? "..." : `$${stats.totalEarnings.toLocaleString()}`}
           icon={TrendingUp}
-          description="Platform revenue"
+          description="Circulating rewards"
           trend={{ value: "+15.3%", isUp: true }}
           delay={0.4}
         />
@@ -221,12 +293,7 @@ export const DashboardView = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              {[
-                { user: 'Sarah J.', action: 'Completed "Follow on Twitter"', time: '2 mins ago', amount: '+$0.50' },
-                { user: 'Mike R.', action: 'Requested Withdrawal', time: '15 mins ago', amount: '-$25.00' },
-                { user: 'Alex B.', action: 'New Registration', time: '1 hour ago', amount: null },
-                { user: 'Emma W.', action: 'Referral Bonus', time: '3 hours ago', amount: '+$0.05' },
-              ].map((item, i) => (
+              {recentActivities.length > 0 ? recentActivities.map((item, i) => (
                 <div key={i} className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
@@ -242,7 +309,9 @@ export const DashboardView = () => {
                     <p className="text-[10px] text-muted-foreground">{item.time}</p>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <p className="text-sm text-center text-muted-foreground py-4">No recent activities found.</p>
+              )}
             </div>
           </CardContent>
         </Card>

@@ -35,19 +35,37 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { motion } from 'motion/react';
 import { Profile } from '@/src/types';
-
-const mockUsers: Profile[] = [
-  { id: '1', email: 'ahmadtariq1to90@gmail.com', full_name: 'Ahmad Tariq', role: 'admin', balance: 1250.50, referral_code: 'ADMIN01', referred_by: null, created_at: '2024-01-01T10:00:00Z' },
-  { id: '2', email: 'user1@example.com', full_name: 'John Doe', role: 'user', balance: 45.20, referral_code: 'JOHN45', referred_by: '1', created_at: '2024-02-15T14:30:00Z' },
-  { id: '3', email: 'user2@example.com', full_name: 'Sarah Smith', role: 'user', balance: 12.00, referral_code: 'SARAH12', referred_by: '1', created_at: '2024-03-10T09:15:00Z' },
-  { id: '4', email: 'user3@example.com', full_name: 'Mike Johnson', role: 'user', balance: 89.75, referral_code: 'MIKE89', referred_by: '2', created_at: '2024-03-20T16:45:00Z' },
-  { id: '5', email: 'user4@example.com', full_name: 'Emma Wilson', role: 'user', balance: 5.50, referral_code: 'EMMA05', referred_by: null, created_at: '2024-04-01T11:20:00Z' },
-];
+import { supabase } from '@/src/lib/supabase';
+import { toast } from 'sonner';
 
 export const UsersView = () => {
   const [searchTerm, setSearchTerm] = React.useState('');
+  const [users, setUsers] = React.useState<Profile[]>([]);
+  const [loading, setLoading] = React.useState(true);
 
-  const filteredUsers = mockUsers.filter(user => 
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setUsers(data || []);
+    } catch (error: any) {
+      console.error('Error fetching users:', error);
+      toast.error('Failed to load users');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const filteredUsers = users.filter(user => 
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (user.full_name && user.full_name.toLowerCase().includes(searchTerm.toLowerCase()))
   );
@@ -166,7 +184,7 @@ export const UsersView = () => {
           </div>
           <div className="mt-4 flex items-center justify-between">
             <p className="text-xs text-muted-foreground">
-              Showing <span className="font-bold text-foreground">{filteredUsers.length}</span> of <span className="font-bold text-foreground">{mockUsers.length}</span> users
+              Showing <span className="font-bold text-foreground">{filteredUsers.length}</span> of <span className="font-bold text-foreground">{users.length}</span> users
             </p>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" disabled>

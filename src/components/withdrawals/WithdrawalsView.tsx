@@ -37,58 +37,95 @@ import {
 import { Withdrawal } from '@/src/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-
-const mockWithdrawals: Withdrawal[] = [
-  { 
-    id: '1', 
-    user_id: '2', 
-    amount: 25.00, 
-    status: 'pending', 
-    payment_method: 'PayPal', 
-    payment_details: 'john.doe@example.com', 
-    created_at: '2024-04-07T10:00:00Z',
-    profiles: { id: '2', email: 'user1@example.com', full_name: 'John Doe', role: 'user', balance: 45.20, referral_code: 'JOHN45', referred_by: '1', created_at: '2024-02-15T14:30:00Z' }
-  },
-  { 
-    id: '2', 
-    user_id: '4', 
-    amount: 50.00, 
-    status: 'pending', 
-    payment_method: 'Bank Transfer', 
-    payment_details: 'Bank: Chase, Acc: 123456789', 
-    created_at: '2024-04-07T11:30:00Z',
-    profiles: { id: '4', email: 'user3@example.com', full_name: 'Mike Johnson', role: 'user', balance: 89.75, referral_code: 'MIKE89', referred_by: '2', created_at: '2024-03-20T16:45:00Z' }
-  },
-  { 
-    id: '3', 
-    user_id: '3', 
-    amount: 10.00, 
-    status: 'approved', 
-    payment_method: 'Mobile Money', 
-    payment_details: '+1234567890', 
-    created_at: '2024-04-06T14:00:00Z',
-    profiles: { id: '3', email: 'user2@example.com', full_name: 'Sarah Smith', role: 'user', balance: 12.00, referral_code: 'SARAH12', referred_by: '1', created_at: '2024-03-10T09:15:00Z' }
-  },
-];
+import { supabase } from '@/src/lib/supabase';
 
 export const WithdrawalsView = () => {
   const [activeTab, setActiveTab] = React.useState('pending');
+  const [withdrawals, setWithdrawals] = React.useState<Withdrawal[]>([]);
+  const [loading, setLoading] = React.useState(true);
 
-  const filteredWithdrawals = mockWithdrawals.filter(w => w.status === activeTab);
+  const fetchWithdrawals = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('withdrawals')
+        .select('*, profiles(*)')
+        .order('created_at', { ascending: false });
 
-  const handleApprove = (id: string) => {
-    toast.success('Withdrawal approved!', {
-      description: 'The payment has been processed and balance deducted.',
-    });
+      if (error) throw error;
+      setWithdrawals(data || []);
+    } catch (error: any) {
+      console.error('Error fetching withdrawals:', error);
+      toast.error('Failed to load withdrawals');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleReject = (id: string) => {
-    toast.error('Withdrawal rejected.', {
-      description: 'The request has been cancelled.',
-    });
+  React.useEffect(() => {
+    fetchWithdrawals();
+  }, []);
+
+  const filteredWithdrawals = withdrawals.filter(w => w.status === activeTab);
+
+  const handleApprove = async (withdrawal: Withdrawal) => {
+    try {
+      // 1. Update withdrawal status
+      const { error: updateError } = await supabase
+        .from('withdrawals')
+        .update({ status: 'approved' })
+        .eq('id', withdrawal.id);
+
+      if (updateError) throw updateError;
+
+      // 2. Deduct balance from user
+      const { data: profile } = await supabase.from('profiles').select('balance').eq('id', withdrawal.user_id).single();
+      const newBalance = (profile?.balance || 0) - withdrawal.amount;
+
+      if (newBalance < 0) {
+        toast.error('Insufficient user balance to process this withdrawal.');
+        // We might want to revert the status or mark as failed
+        return;
+      }
+
+      const { error: balanceError } = await supabase
+        .from('profiles')
+        .update({ balance: newBalance })
+        .eq('id', withdrawal.user_id);
+
+      if (balanceError) throw balanceError;
+
+      toast.success('Withdrawal approved!', {
+        description: `Payment processed and $${withdrawal.amount.toFixed(2)} deducted from user balance.`,
+      });
+      fetchWithdrawals();
+    } catch (error: any) {
+      console.error('Error approving withdrawal:', error);
+      toast.error('Failed to approve withdrawal');
+    }
+  };
+
+  const handleReject = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('withdrawals')
+        .update({ status: 'rejected' })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast.error('Withdrawal rejected.', {
+        description: 'The request has been cancelled.',
+      });
+      fetchWithdrawals();
+    } catch (error: any) {
+      console.error('Error rejecting withdrawal:', error);
+      toast.error('Failed to reject withdrawal');
+    }
   };
 
   const getMethodIcon = (method: string) => {
+    if (!method) return <Wallet className="h-4 w-4" />;
     switch (method.toLowerCase()) {
       case 'paypal': return <CreditCard className="h-4 w-4" />;
       case 'bank transfer': return <Banknote className="h-4 w-4" />;
@@ -123,7 +160,7 @@ export const WithdrawalsView = () => {
               <Clock className="h-4 w-4" />
               Pending
               <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">
-                {mockWithdrawals.filter(w => w.status === 'pending').length}
+                {withdrawals.filter(w => w.status === 'pending').length}
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="approved" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">

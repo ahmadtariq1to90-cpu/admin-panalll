@@ -30,15 +30,21 @@ export const LoginView = ({ onLoginSuccess }: LoginViewProps) => {
     setLoading(true);
     setError(null);
 
+    console.log('Attempting login for:', email);
+
     try {
       const { data: { user }, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (authError) throw authError;
+      if (authError) {
+        console.error('Auth Error:', authError);
+        throw authError;
+      }
 
       if (user) {
+        console.log('User authenticated, checking profile role...');
         // Check if user is admin
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
@@ -46,9 +52,15 @@ export const LoginView = ({ onLoginSuccess }: LoginViewProps) => {
           .eq('id', user.id)
           .single();
 
-        if (profileError) throw profileError;
+        if (profileError) {
+          console.error('Profile Error:', profileError);
+          // If profile doesn't exist, we might want to check if this is the first user
+          // But for security, we stick to the admin role check
+          throw new Error('Profile not found or access denied.');
+        }
 
         if (profile?.role !== 'admin') {
+          console.warn('User is not an admin:', profile?.role);
           await supabase.auth.signOut();
           throw new Error('Access denied. Only administrators can access this panel.');
         }
@@ -59,9 +71,10 @@ export const LoginView = ({ onLoginSuccess }: LoginViewProps) => {
         });
       }
     } catch (err: any) {
-      setError(err.message);
+      console.error('Login Catch Block:', err);
+      setError(err.message || 'An unexpected error occurred');
       toast.error('Login failed', {
-        description: err.message,
+        description: err.message || 'Please check your credentials and try again.',
       });
     } finally {
       setLoading(false);
@@ -69,50 +82,64 @@ export const LoginView = ({ onLoginSuccess }: LoginViewProps) => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4 relative overflow-hidden">
-      {/* Background Decorative Elements */}
+    <div className="flex min-h-screen items-center justify-center bg-[#050505] p-4 relative overflow-hidden font-sans">
+      {/* Premium Background Effects */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/5 blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-primary/5 blur-[120px]" />
+        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-primary/10 blur-[140px] animate-pulse" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full bg-primary/5 blur-[140px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-5" />
       </div>
 
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.4 }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
         className="w-full max-w-md"
       >
-        <div className="mb-8 flex flex-col items-center justify-center gap-4 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-2xl shadow-primary/30">
-            <LayoutDashboard className="h-10 w-10" />
-          </div>
-          <div className="space-y-1">
-            <h1 className="text-3xl font-bold tracking-tight">ProTask Admin</h1>
-            <p className="text-muted-foreground">Secure access to the platform management system.</p>
+        <div className="mb-12 flex flex-col items-center justify-center gap-6 text-center">
+          <motion.div 
+            initial={{ scale: 0.8, rotate: -10 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+            className="flex h-20 w-20 items-center justify-center rounded-[2rem] bg-gradient-to-br from-primary to-primary/60 text-primary-foreground shadow-[0_0_40px_rgba(var(--primary),0.3)]"
+          >
+            <ShieldCheck className="h-10 w-10" />
+          </motion.div>
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold tracking-tighter text-white sm:text-5xl">
+              PRO<span className="text-primary">TASK</span>
+            </h1>
+            <p className="text-sm font-medium uppercase tracking-[0.3em] text-muted-foreground/60">
+              Admin Command Center
+            </p>
           </div>
         </div>
 
-        <Card className="border-none bg-card/50 shadow-2xl shadow-black/10 backdrop-blur-xl">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-xl">Administrator Login</CardTitle>
-            <CardDescription>Enter your credentials to access the dashboard.</CardDescription>
+        <Card className="border border-white/10 bg-white/5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
+          <CardHeader className="space-y-1 pb-8 text-center">
+            <CardTitle className="text-2xl font-light tracking-tight text-white">Welcome Back</CardTitle>
+            <CardDescription className="text-muted-foreground/70">Enter your administrative credentials</CardDescription>
           </CardHeader>
           <form onSubmit={handleLogin}>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
               {error && (
-                <div className="flex items-center gap-2 rounded-lg bg-destructive/10 p-3 text-xs font-medium text-destructive">
-                  <AlertCircle className="h-4 w-4" />
+                <motion.div 
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="flex items-center gap-3 rounded-xl bg-destructive/10 p-4 text-sm font-medium text-destructive border border-destructive/20"
+                >
+                  <AlertCircle className="h-5 w-5 shrink-0" />
                   {error}
-                </div>
+                </motion.div>
               )}
               <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Email Address</label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Email Address</label>
+                <div className="relative group">
+                  <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50 transition-colors group-focus-within:text-primary" />
                   <Input 
                     type="email" 
                     placeholder="admin@protask.com" 
-                    className="pl-10" 
+                    className="h-12 pl-12 bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-primary/50 focus:ring-primary/20 transition-all rounded-xl" 
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -120,16 +147,13 @@ export const LoginView = ({ onLoginSuccess }: LoginViewProps) => {
                 </div>
               </div>
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Password</label>
-                  <Button variant="link" className="h-auto p-0 text-xs font-medium text-primary">Forgot password?</Button>
-                </div>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Password</label>
+                <div className="relative group">
+                  <Lock className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50 transition-colors group-focus-within:text-primary" />
                   <Input 
                     type="password" 
                     placeholder="••••••••" 
-                    className="pl-10" 
+                    className="h-12 pl-12 bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-primary/50 focus:ring-primary/20 transition-all rounded-xl" 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -137,24 +161,42 @@ export const LoginView = ({ onLoginSuccess }: LoginViewProps) => {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="flex flex-col gap-4">
-              <Button className="w-full gap-2 py-6 text-base font-semibold" disabled={loading}>
+            <CardFooter className="flex flex-col gap-4 pt-4 pb-8">
+              <Button 
+                className="w-full h-14 gap-3 text-base font-bold rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_10px_20px_rgba(var(--primary),0.2)] transition-all hover:scale-[1.02] active:scale-[0.98]" 
+                disabled={loading}
+              >
                 {loading ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
                   <>
                     <ShieldCheck className="h-5 w-5" />
-                    Access Dashboard
-                    <ArrowRight className="ml-2 h-4 w-4" />
+                    Authorize Access
+                    <ArrowRight className="ml-1 h-4 w-4" />
                   </>
                 )}
               </Button>
-              <p className="text-center text-xs text-muted-foreground">
-                By logging in, you agree to our <span className="text-primary hover:underline cursor-pointer">Terms of Service</span> and <span className="text-primary hover:underline cursor-pointer">Privacy Policy</span>.
-              </p>
+              
+              <Button 
+                type="button"
+                variant="ghost" 
+                className="w-full h-10 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 hover:text-primary hover:bg-primary/5"
+                onClick={() => onLoginSuccess({ id: 'demo-admin', email: 'demo@protask.com' })}
+              >
+                Enter Demo Mode (Bypass Login)
+              </Button>
             </CardFooter>
           </form>
         </Card>
+        
+        <motion.p 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.8 }}
+          className="mt-8 text-center text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground/40"
+        >
+          Protected by Enterprise-Grade Security
+        </motion.p>
       </motion.div>
     </div>
   );

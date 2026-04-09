@@ -35,58 +35,112 @@ import {
 import { TaskSubmission } from '@/src/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-
-const mockSubmissions: TaskSubmission[] = [
-  { 
-    id: '1', 
-    user_id: '2', 
-    task_id: '101', 
-    status: 'pending', 
-    proof_url: 'https://picsum.photos/seed/proof1/800/600', 
-    created_at: '2024-04-07T08:30:00Z',
-    profiles: { id: '2', email: 'user1@example.com', full_name: 'John Doe', role: 'user', balance: 45.20, referral_code: 'JOHN45', referred_by: '1', created_at: '2024-02-15T14:30:00Z' },
-    tasks: { id: '101', title: 'Follow on Twitter', description: 'Follow our official Twitter handle @ProTaskApp', reward: 0.50, created_at: '2024-01-01T00:00:00Z' }
-  },
-  { 
-    id: '2', 
-    user_id: '3', 
-    task_id: '102', 
-    status: 'pending', 
-    proof_url: 'https://picsum.photos/seed/proof2/800/600', 
-    created_at: '2024-04-07T09:15:00Z',
-    profiles: { id: '3', email: 'user2@example.com', full_name: 'Sarah Smith', role: 'user', balance: 12.00, referral_code: 'SARAH12', referred_by: '1', created_at: '2024-03-10T09:15:00Z' },
-    tasks: { id: '102', title: 'Join Telegram Channel', description: 'Join our official Telegram channel for updates', reward: 0.75, created_at: '2024-01-01T00:00:00Z' }
-  },
-  { 
-    id: '3', 
-    user_id: '4', 
-    task_id: '101', 
-    status: 'approved', 
-    proof_url: 'https://picsum.photos/seed/proof3/800/600', 
-    created_at: '2024-04-06T16:45:00Z',
-    profiles: { id: '4', email: 'user3@example.com', full_name: 'Mike Johnson', role: 'user', balance: 89.75, referral_code: 'MIKE89', referred_by: '2', created_at: '2024-03-20T16:45:00Z' },
-    tasks: { id: '101', title: 'Follow on Twitter', description: 'Follow our official Twitter handle @ProTaskApp', reward: 0.50, created_at: '2024-01-01T00:00:00Z' }
-  },
-];
+import { supabase } from '@/src/lib/supabase';
 
 export const TasksView = () => {
   const [activeTab, setActiveTab] = React.useState('pending');
   const [selectedSubmission, setSelectedSubmission] = React.useState<TaskSubmission | null>(null);
+  const [submissions, setSubmissions] = React.useState<TaskSubmission[]>([]);
+  const [loading, setLoading] = React.useState(true);
 
-  const filteredSubmissions = mockSubmissions.filter(s => s.status === activeTab);
+  const fetchSubmissions = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('task_submissions')
+        .select('*, profiles(*), tasks(*)')
+        .order('created_at', { ascending: false });
 
-  const handleApprove = (id: string) => {
-    toast.success('Task approved successfully!', {
-      description: 'The user has been credited with the reward.',
-    });
-    setSelectedSubmission(null);
+      if (error) throw error;
+      setSubmissions(data || []);
+    } catch (error: any) {
+      console.error('Error fetching submissions:', error);
+      toast.error('Failed to load submissions');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleReject = (id: string) => {
-    toast.error('Task rejected.', {
-      description: 'The submission has been marked as invalid.',
-    });
-    setSelectedSubmission(null);
+  React.useEffect(() => {
+    fetchSubmissions();
+  }, []);
+
+  const filteredSubmissions = submissions.filter(s => s.status === activeTab);
+
+  const handleApprove = async (submission: TaskSubmission) => {
+    try {
+      // 1. Update submission status
+      const { error: updateError } = await supabase
+        .from('task_submissions')
+        .update({ status: 'approved' })
+        .eq('id', submission.id);
+
+      if (updateError) throw updateError;
+
+      // 2. Credit user balance
+      const reward = submission.tasks?.reward || 0;
+      
+      // Fetch current balance first to be safe
+      const { data: profile } = await supabase.from('profiles').select('balance').eq('id', submission.user_id).single();
+      const newBalance = (profile?.balance || 0) + reward;
+      
+      const { error: balanceError } = await supabase
+        .from('profiles')
+        .update({ balance: newBalance })
+        .eq('id', submission.user_id);
+
+      if (balanceError) throw balanceError;
+
+      // 3. Handle Referral Commission (10%)
+      if (submission.profiles?.referred_by) {
+        const commission = reward * 0.1;
+        // Find referrer by referral_code
+        const { data: referrer } = await supabase
+          .from('profiles')
+          .select('id, balance')
+          .eq('referral_code', submission.profiles.referred_by)
+          .single();
+
+        if (referrer) {
+          await supabase.from('profiles').update({ balance: (referrer.balance || 0) + commission }).eq('id', referrer.id);
+          // Log referral commission
+          await supabase.from('referrals').insert({
+            referrer_id: referrer.id,
+            referred_id: submission.user_id,
+            commission_earned: commission
+          });
+        }
+      }
+
+      toast.success('Task approved successfully!', {
+        description: `User credited with $${reward.toFixed(2)}.`,
+      });
+      fetchSubmissions();
+      setSelectedSubmission(null);
+    } catch (error: any) {
+      console.error('Error approving task:', error);
+      toast.error('Failed to approve task');
+    }
+  };
+
+  const handleReject = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('task_submissions')
+        .update({ status: 'rejected' })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast.error('Task rejected.', {
+        description: 'The submission has been marked as invalid.',
+      });
+      fetchSubmissions();
+      setSelectedSubmission(null);
+    } catch (error: any) {
+      console.error('Error rejecting task:', error);
+      toast.error('Failed to reject task');
+    }
   };
 
   return (
@@ -115,7 +169,7 @@ export const TasksView = () => {
               <Clock className="h-4 w-4" />
               Pending
               <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">
-                {mockSubmissions.filter(s => s.status === 'pending').length}
+                {submissions.filter(s => s.status === 'pending').length}
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="approved" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
