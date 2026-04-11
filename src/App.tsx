@@ -124,21 +124,21 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a]">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-6">
           <div className="relative">
-            <div className="absolute -inset-4 bg-primary/20 blur-xl rounded-full animate-pulse" />
+            <div className="absolute -inset-4 bg-primary/10 blur-xl rounded-full animate-pulse" />
             <Loader2 className="h-12 w-12 animate-spin text-primary relative z-10" />
           </div>
           <div className="text-center space-y-2">
-            <p className="text-sm font-bold text-white uppercase tracking-[0.2em]">Initializing Admin OS</p>
-            <p className="text-[10px] font-mono text-muted-foreground/60 uppercase tracking-widest">Verifying security credentials...</p>
+            <p className="text-sm font-bold text-foreground uppercase tracking-[0.2em]">Initializing Admin OS</p>
+            <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest">Verifying security credentials...</p>
           </div>
           <Button 
             variant="ghost" 
             size="sm" 
             onClick={() => window.location.reload()}
-            className="mt-4 text-[10px] font-mono text-muted-foreground/40 hover:text-white uppercase tracking-widest"
+            className="mt-4 text-[10px] font-bold text-muted-foreground/40 hover:text-primary hover:bg-primary/5 uppercase tracking-widest rounded-xl"
           >
             Stuck? Click to reload
           </Button>

@@ -59,25 +59,24 @@ interface StatCardProps {
 }
 
 const StatCard = ({ title, value, icon: Icon, trend, trendValue, color }: any) => (
-  <Card className="relative overflow-hidden border-white/5 bg-[#0d0d0d] shadow-2xl group transition-all duration-500 hover:border-primary/30">
-    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+  <Card className="relative overflow-hidden border-border bg-card shadow-sm group transition-all hover:border-primary/30">
     <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-      <CardTitle className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground/60">{title}</CardTitle>
-      <div className={cn("p-2 rounded-lg bg-black border border-white/5 group-hover:border-primary/20 transition-colors", color)}>
+      <CardTitle className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/60">{title}</CardTitle>
+      <div className={cn("p-2 rounded-lg bg-muted/50 border border-border group-hover:border-primary/20 transition-colors", color)}>
         <Icon className="h-4 w-4" />
       </div>
     </CardHeader>
     <CardContent>
-      <div className="text-3xl font-bold tracking-tight text-white mb-1 font-mono">{value}</div>
+      <div className="text-2xl font-bold tracking-tight text-foreground mb-1">{value}</div>
       <div className="flex items-center gap-2">
         <div className={cn(
-          "flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full",
-          trend === 'up' ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
+          "flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-md",
+          trend === 'up' ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-600"
         )}>
           {trend === 'up' ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
           {trendValue}
         </div>
-        <span className="text-[10px] text-muted-foreground/40 font-mono uppercase tracking-wider">vs last 24h</span>
+        <span className="text-[10px] text-muted-foreground/60 font-medium uppercase tracking-wider">vs last 24h</span>
       </div>
     </CardContent>
   </Card>
@@ -98,21 +97,6 @@ export const DashboardView = () => {
     setLoading(true);
     setError(null);
     try {
-      // Schema check for debugging
-      if (import.meta.env.DEV) {
-        const tables = ['users', 'task_submissions', 'withdrawals', 'tasks', 'referral'];
-        console.log('--- Schema Integrity Check ---');
-        for (const table of tables) {
-          const { error: tableError } = await supabase.from(table).select('*').limit(1);
-          if (tableError) {
-            console.error(`Table "${table}" check failed:`, tableError.message);
-          } else {
-            console.log(`Table "${table}" is accessible.`);
-          }
-        }
-        console.log('------------------------------');
-      }
-
       const [
         userRes,
         taskRes,
@@ -160,56 +144,46 @@ export const DashboardView = () => {
   }, []);
 
   return (
-    <div className="space-y-10">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="space-y-8">
+      <div className="flex flex-col gap-4">
         {isUsingFallback && (
-          <motion.div 
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-center gap-3 text-amber-500"
-          >
-            <AlertCircle className="h-5 w-5" />
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3 text-amber-700">
+            <AlertCircle className="h-5 w-5 shrink-0" />
             <div className="text-xs font-medium">
-              <p className="font-bold uppercase tracking-wider mb-1">Warning: Using Fallback Credentials</p>
-              <p className="opacity-80">You haven't configured your own Supabase URL and Key in the Secrets panel. You are seeing data from a default project.</p>
+              <p className="font-bold uppercase tracking-wider mb-0.5">Warning: Using Fallback Credentials</p>
+              <p className="opacity-80">You haven't configured your own Supabase URL and Key. You are seeing data from a default project.</p>
             </div>
-          </motion.div>
+          </div>
         )}
 
-        <motion.div 
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={cn(
-            "border rounded-xl p-4 flex items-center gap-3",
-            error ? "bg-rose-500/10 border-rose-500/20 text-rose-500" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-500"
-          )}
-        >
-          <div className={cn("h-2 w-2 rounded-full animate-pulse", error ? "bg-rose-500" : "bg-emerald-500")} />
-          <div className="text-xs font-medium">
-            <p className="font-bold uppercase tracking-wider mb-1">Database Status: {error ? 'Error' : 'Connected'}</p>
-            <p className="opacity-80">{error ? `Issue: ${error}` : 'Successfully connected to your Supabase instance.'}</p>
-          </div>
-          {error && (
+        {error && (
+          <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 flex items-center gap-3 text-rose-700">
+            <AlertCircle className="h-5 w-5 shrink-0" />
+            <div className="text-xs font-medium flex-1">
+              <p className="font-bold uppercase tracking-wider mb-0.5">Database Status: Error</p>
+              <p className="opacity-80">Issue: {error}</p>
+            </div>
             <Button 
-              variant="ghost" 
+              variant="outline" 
               size="sm" 
               onClick={fetchStats}
-              className="ml-auto h-8 text-[10px] font-bold uppercase tracking-widest hover:bg-rose-500/10"
+              className="h-8 text-[10px] font-bold uppercase tracking-widest bg-white border-rose-200 hover:bg-rose-50"
             >
               <RefreshCcw className="h-3 w-3 mr-2" />
               Retry
             </Button>
-          )}
-        </motion.div>
+          </div>
+        )}
       </div>
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2 text-primary font-mono text-[10px] uppercase tracking-[0.3em]">
-          <div className="h-1 w-1 rounded-full bg-primary animate-pulse" />
+
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2 text-primary font-bold text-[10px] uppercase tracking-[0.2em]">
+          <div className="h-1.5 w-1.5 rounded-full bg-primary" />
           System Operational
         </div>
-        <h1 className="text-4xl font-bold tracking-tight text-white">Command Center</h1>
-        <p className="text-muted-foreground max-w-2xl">
-          Real-time intelligence and oversight for the ProTask ecosystem. Monitor user growth, financial flows, and task throughput.
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Command Center</h1>
+        <p className="text-muted-foreground text-sm max-w-2xl">
+          Real-time intelligence and oversight for the ProTask ecosystem.
         </p>
       </div>
 
@@ -220,7 +194,7 @@ export const DashboardView = () => {
           icon={Users} 
           trend="up" 
           trendValue="+12.5%"
-          color="text-blue-500"
+          color="text-blue-600"
         />
         <StatCard 
           title="Pending Validation" 
@@ -228,7 +202,7 @@ export const DashboardView = () => {
           icon={CheckSquare} 
           trend="down" 
           trendValue="-5.2%"
-          color="text-amber-500"
+          color="text-amber-600"
         />
         <StatCard 
           title="Capital Outflow" 
@@ -236,7 +210,7 @@ export const DashboardView = () => {
           icon={Wallet} 
           trend="up" 
           trendValue="+8.1%"
-          color="text-rose-500"
+          color="text-rose-600"
         />
         <StatCard 
           title="Total Liquidity" 
@@ -244,60 +218,58 @@ export const DashboardView = () => {
           icon={TrendingUp} 
           trend="up" 
           trendValue="+24.3%"
-          color="text-emerald-500"
+          color="text-emerald-600"
         />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-7">
-        <Card className="lg:col-span-4 border-white/5 bg-[#0d0d0d] shadow-2xl">
+        <Card className="lg:col-span-4 border-border bg-card shadow-sm">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-lg font-bold text-white">Revenue Analytics</CardTitle>
-                <CardDescription className="text-muted-foreground/60 text-xs font-mono uppercase tracking-wider">Financial throughput over time</CardDescription>
+                <CardTitle className="text-lg font-bold text-foreground">Revenue Analytics</CardTitle>
+                <CardDescription className="text-muted-foreground/60 text-[10px] font-bold uppercase tracking-wider">Financial throughput over time</CardDescription>
               </div>
-              <div className="flex items-center gap-2 bg-black/40 p-1 rounded-lg border border-white/5">
-                <Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold uppercase tracking-widest px-3 bg-white/5 text-white">Daily</Button>
-                <Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold uppercase tracking-widest px-3 text-muted-foreground hover:text-white">Weekly</Button>
+              <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg border border-border">
+                <Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold uppercase tracking-widest px-3 bg-background shadow-sm text-foreground">Daily</Button>
+                <Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold uppercase tracking-widest px-3 text-muted-foreground hover:text-foreground">Weekly</Button>
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="h-[350px] w-full mt-4">
+            <div className="h-[300px] w-full mt-4">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={data}>
                   <defs>
                     <linearGradient id="colorEarnings" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="oklch(0.45 0.15 250)" stopOpacity={0.1}/>
+                      <stop offset="95%" stopColor="oklch(0.45 0.15 250)" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
                   <XAxis 
                     dataKey="name" 
-                    stroke="rgba(255,255,255,0.3)" 
+                    stroke="rgba(0,0,0,0.3)" 
                     fontSize={10} 
                     tickLine={false} 
                     axisLine={false}
-                    fontFamily="monospace"
                   />
                   <YAxis 
-                    stroke="rgba(255,255,255,0.3)" 
+                    stroke="rgba(0,0,0,0.3)" 
                     fontSize={10} 
                     tickLine={false} 
                     axisLine={false}
-                    fontFamily="monospace"
                     tickFormatter={(value) => `$${value}`}
                   />
                   <Tooltip 
-                    contentStyle={{ backgroundColor: '#000', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
-                    itemStyle={{ color: '#10b981', fontSize: '12px', fontFamily: 'monospace' }}
-                    labelStyle={{ color: '#fff', fontSize: '10px', marginBottom: '4px', fontFamily: 'monospace' }}
+                    contentStyle={{ backgroundColor: '#fff', border: '1px solid rgba(0,0,0,0.1)', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
+                    itemStyle={{ color: 'oklch(0.45 0.15 250)', fontSize: '12px', fontWeight: 'bold' }}
+                    labelStyle={{ color: '#000', fontSize: '10px', marginBottom: '4px', fontWeight: 'bold' }}
                   />
                   <Area 
                     type="monotone" 
                     dataKey="earnings" 
-                    stroke="#10b981" 
+                    stroke="oklch(0.45 0.15 250)" 
                     strokeWidth={2}
                     fillOpacity={1} 
                     fill="url(#colorEarnings)" 
@@ -308,50 +280,47 @@ export const DashboardView = () => {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-3 border-white/5 bg-[#0d0d0d] shadow-2xl">
+        <Card className="lg:col-span-3 border-border bg-card shadow-sm">
           <CardHeader>
-            <CardTitle className="text-lg font-bold text-white">Recent Telemetry</CardTitle>
-            <CardDescription className="text-muted-foreground/60 text-xs font-mono uppercase tracking-wider">Live task submission feed</CardDescription>
+            <CardTitle className="text-lg font-bold text-foreground">Recent Telemetry</CardTitle>
+            <CardDescription className="text-muted-foreground/60 text-[10px] font-bold uppercase tracking-wider">Live task submission feed</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-6">
+            <div className="space-y-5">
               {loading ? (
                 Array(5).fill(0).map((_, i) => (
                   <div key={i} className="flex items-center gap-4">
-                    <Skeleton className="h-10 w-10 rounded-full bg-white/5" />
-                    <div className="space-y-2 flex-1">
-                      <Skeleton className="h-4 w-full bg-white/5" />
-                      <Skeleton className="h-3 w-2/3 bg-white/5" />
+                    <Skeleton className="h-9 w-9 rounded-full bg-muted" />
+                    <div className="space-y-1.5 flex-1">
+                      <Skeleton className="h-3.5 w-full bg-muted" />
+                      <Skeleton className="h-2.5 w-2/3 bg-muted" />
                     </div>
                   </div>
                 ))
               ) : recentActivities.length === 0 ? (
-                <div className="h-40 flex items-center justify-center text-muted-foreground/40 font-mono text-xs uppercase tracking-widest">
+                <div className="h-40 flex items-center justify-center text-muted-foreground/40 font-bold text-[10px] uppercase tracking-widest">
                   No recent telemetry detected
                 </div>
               ) : (
                 recentActivities.map((activity) => (
                   <div key={activity.id} className="flex items-center gap-4 group cursor-pointer">
-                    <div className="relative">
-                      <div className="absolute -inset-1 bg-primary/20 blur-sm rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-                      <Avatar className="h-10 w-10 border border-white/10 relative z-10">
-                        <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${activity.users?.email}`} />
-                        <AvatarFallback className="bg-primary/10 text-primary text-xs">{activity.users?.full_name?.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                    </div>
-                    <div className="flex-1 space-y-1 overflow-hidden">
-                      <p className="text-sm font-bold text-white truncate group-hover:text-primary transition-colors">
+                    <Avatar className="h-9 w-9 border border-border">
+                      <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${activity.users?.email}`} />
+                      <AvatarFallback className="bg-primary/5 text-primary text-[10px] font-bold">{activity.users?.full_name?.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 space-y-0.5 overflow-hidden">
+                      <p className="text-xs font-bold text-foreground truncate group-hover:text-primary transition-colors">
                         {activity.users?.full_name || 'Anonymous User'}
                       </p>
-                      <p className="text-[10px] text-muted-foreground/60 font-mono uppercase tracking-tight truncate">
+                      <p className="text-[10px] text-muted-foreground font-medium truncate">
                         {activity.tasks?.title || 'Unknown Task'}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs font-mono font-bold text-emerald-500">
+                      <p className="text-xs font-bold text-emerald-600">
                         +${activity.tasks?.reward?.toFixed(2) || '0.00'}
                       </p>
-                      <p className="text-[10px] text-muted-foreground/40 font-mono">
+                      <p className="text-[9px] text-muted-foreground/60 font-medium">
                         {new Date(activity.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
@@ -359,42 +328,50 @@ export const DashboardView = () => {
                 ))
               )}
             </div>
-            <Button variant="ghost" className="w-full mt-8 h-10 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/40 hover:text-primary hover:bg-primary/5 border border-dashed border-white/5">
+            <Button variant="ghost" className="w-full mt-6 h-9 text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/60 hover:text-primary hover:bg-primary/5 border border-dashed border-border">
               Access Full Logs
             </Button>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-white/5 bg-[#0d0d0d] shadow-2xl p-6 flex flex-col items-center justify-center text-center group hover:border-primary/20 transition-all">
-          <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-4 group-hover:scale-110 transition-transform">
-            <ShieldCheck className="h-6 w-6" />
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="border border-border bg-card shadow-sm p-4 rounded-xl flex items-center gap-4 group hover:border-primary/20 transition-all">
+          <div className="h-10 w-10 rounded-lg bg-primary/5 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+            <ShieldCheck className="h-5 w-5" />
           </div>
-          <h3 className="text-sm font-bold text-white mb-1">Security Core</h3>
-          <p className="text-[10px] text-muted-foreground/60 font-mono uppercase tracking-wider">Active & Encrypted</p>
-        </Card>
-        <Card className="border-white/5 bg-[#0d0d0d] shadow-2xl p-6 flex flex-col items-center justify-center text-center group hover:border-primary/20 transition-all">
-          <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 mb-4 group-hover:scale-110 transition-transform">
-            <Activity className="h-6 w-6" />
+          <div>
+            <h3 className="text-xs font-bold text-foreground">Security Core</h3>
+            <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">Active & Encrypted</p>
           </div>
-          <h3 className="text-sm font-bold text-white mb-1">Database Sync</h3>
-          <p className="text-[10px] text-muted-foreground/60 font-mono uppercase tracking-wider">Latency: 24ms</p>
-        </Card>
-        <Card className="border-white/5 bg-[#0d0d0d] shadow-2xl p-6 flex flex-col items-center justify-center text-center group hover:border-primary/20 transition-all">
-          <div className="h-12 w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500 mb-4 group-hover:scale-110 transition-transform">
-            <Zap className="h-6 w-6" />
+        </div>
+        <div className="border border-border bg-card shadow-sm p-4 rounded-xl flex items-center gap-4 group hover:border-primary/20 transition-all">
+          <div className="h-10 w-10 rounded-lg bg-emerald-500/5 flex items-center justify-center text-emerald-600 group-hover:scale-110 transition-transform">
+            <Activity className="h-5 w-5" />
           </div>
-          <h3 className="text-sm font-bold text-white mb-1">Task Engine</h3>
-          <p className="text-[10px] text-muted-foreground/60 font-mono uppercase tracking-wider">Throughput: 1.2k/hr</p>
-        </Card>
-        <Card className="border-white/5 bg-[#0d0d0d] shadow-2xl p-6 flex flex-col items-center justify-center text-center group hover:border-primary/20 transition-all">
-          <div className="h-12 w-12 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-500 mb-4 group-hover:scale-110 transition-transform">
-            <Bell className="h-6 w-6" />
+          <div>
+            <h3 className="text-xs font-bold text-foreground">Database Sync</h3>
+            <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">Latency: 24ms</p>
           </div>
-          <h3 className="text-sm font-bold text-white mb-1">Alert Matrix</h3>
-          <p className="text-[10px] text-muted-foreground/60 font-mono uppercase tracking-wider">0 Critical Events</p>
-        </Card>
+        </div>
+        <div className="border border-border bg-card shadow-sm p-4 rounded-xl flex items-center gap-4 group hover:border-primary/20 transition-all">
+          <div className="h-10 w-10 rounded-lg bg-blue-500/5 flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
+            <Zap className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="text-xs font-bold text-foreground">Task Engine</h3>
+            <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">Operational</p>
+          </div>
+        </div>
+        <div className="border border-border bg-card shadow-sm p-4 rounded-xl flex items-center gap-4 group hover:border-primary/20 transition-all">
+          <div className="h-10 w-10 rounded-lg bg-rose-500/5 flex items-center justify-center text-rose-600 group-hover:scale-110 transition-transform">
+            <Bell className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="text-xs font-bold text-foreground">Alert Matrix</h3>
+            <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">0 Critical Events</p>
+          </div>
+        </div>
       </div>
     </div>
   );

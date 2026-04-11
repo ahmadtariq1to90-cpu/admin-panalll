@@ -31,21 +31,17 @@ const NavItem = ({ icon: Icon, label, active, onClick }: NavItemProps) => (
   <Button
     variant="ghost"
     className={cn(
-      "w-full justify-start gap-3 px-4 py-6 text-sm font-medium transition-all duration-300 relative group overflow-hidden rounded-none",
+      "w-full justify-start gap-3 px-4 py-5 text-sm font-medium transition-colors relative group rounded-lg",
       active 
-        ? "text-primary bg-primary/5 border-r-2 border-primary" 
-        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+        ? "text-primary bg-primary/5" 
+        : "text-muted-foreground hover:text-foreground hover:bg-muted"
     )}
     onClick={onClick}
   >
-    <Icon className={cn("h-5 w-5 transition-transform duration-300 group-hover:scale-110", active ? "text-primary" : "text-muted-foreground")} />
-    <span className="relative z-10">{label}</span>
+    <Icon className={cn("h-4 w-4", active ? "text-primary" : "text-muted-foreground")} />
+    <span>{label}</span>
     {active && (
-      <motion.div
-        layoutId="active-nav"
-        className="absolute inset-0 bg-primary/5 -z-10"
-        transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-      />
+      <div className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-1 bg-primary rounded-r-full" />
     )}
   </Button>
 );
@@ -71,26 +67,23 @@ export const AdminLayout = ({ children, activeTab, setActiveTab, onLogout, user 
   ];
 
   const SidebarContent = () => (
-    <div className="flex h-full flex-col bg-[#050505] border-r border-white/5">
-      <div className="flex h-24 items-center px-8 border-b border-white/5">
+    <div className="flex h-full flex-col bg-sidebar border-r border-sidebar-border">
+      <div className="flex h-20 items-center px-6 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <div className="relative">
-            <div className="absolute -inset-1 bg-primary/20 blur-sm rounded-lg" />
-            <div className="relative flex h-10 w-10 items-center justify-center rounded-lg bg-black border border-white/10 text-primary">
-              <ShieldCheck className="h-6 w-6" />
-            </div>
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+            <ShieldCheck className="h-5 w-5" />
           </div>
           <div className="flex flex-col">
-            <span className="text-lg font-bold tracking-tight text-white leading-none">PROTASK</span>
-            <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-primary/70 mt-1">Admin OS v2.4</span>
+            <span className="text-base font-bold tracking-tight text-foreground leading-none">PROTASK</span>
+            <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground mt-1">Admin OS v2.4</span>
           </div>
         </div>
       </div>
       
       <ScrollArea className="flex-1">
-        <div className="flex flex-col py-4">
-          <div className="px-6 mb-4">
-            <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/50">Navigation</span>
+        <div className="flex flex-col p-4 gap-1">
+          <div className="px-2 mb-2">
+            <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">Navigation</span>
           </div>
           {navItems.map((item) => (
             <NavItem
@@ -105,50 +98,46 @@ export const AdminLayout = ({ children, activeTab, setActiveTab, onLogout, user 
             />
           ))}
           
-          <div className="mt-10 px-6 space-y-4">
-            <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/50">System Status</span>
-            <div className="space-y-3">
+          <div className="mt-8 px-2 space-y-3">
+            <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">System Status</span>
+            <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono text-muted-foreground/40 uppercase">Core Engine</span>
+                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-tight">Core Engine</span>
                 <div className="flex items-center gap-1.5">
-                  <div className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-[10px] font-mono text-emerald-500 uppercase">Operational</span>
+                  <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  <span className="text-[9px] font-bold text-emerald-600 uppercase">Online</span>
                 </div>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono text-muted-foreground/40 uppercase">Supabase Link</span>
+                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-tight">Supabase</span>
                 <div className="flex items-center gap-1.5">
-                  <div className="h-1 w-1 rounded-full bg-emerald-500" />
-                  <span className="text-[10px] font-mono text-emerald-500 uppercase">Encrypted</span>
+                  <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  <span className="text-[9px] font-bold text-emerald-600 uppercase">Linked</span>
                 </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono text-muted-foreground/40 uppercase">Latency</span>
-                <span className="text-[10px] font-mono text-primary uppercase">24ms</span>
               </div>
             </div>
           </div>
         </div>
       </ScrollArea>
 
-      <div className="p-6 border-t border-white/5 bg-black/20">
-        <div className="mb-6 px-2">
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
-            <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary text-xs font-bold uppercase">
+      <div className="p-4 border-t border-sidebar-border bg-muted/20">
+        <div className="mb-4">
+          <div className="flex items-center gap-3 p-2.5 rounded-xl bg-background border border-border shadow-sm">
+            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary text-xs font-bold uppercase">
               {user?.email?.charAt(0) || 'A'}
             </div>
             <div className="flex flex-col overflow-hidden">
-              <span className="text-xs font-bold text-white truncate">{user?.email?.split('@')[0] || 'Administrator'}</span>
-              <span className="text-[10px] text-muted-foreground truncate">System Administrator</span>
+              <span className="text-xs font-bold text-foreground truncate">{user?.email?.split('@')[0] || 'Administrator'}</span>
+              <span className="text-[9px] font-medium text-muted-foreground truncate">System Admin</span>
             </div>
           </div>
         </div>
         <Button
           variant="ghost"
-          className="w-full justify-start gap-3 px-4 py-6 text-sm font-medium text-rose-500 hover:bg-rose-500/10 hover:text-rose-400 transition-colors rounded-xl"
+          className="w-full justify-start gap-3 px-4 h-11 text-sm font-medium text-destructive hover:bg-destructive/5 hover:text-destructive transition-colors rounded-lg"
           onClick={onLogout}
         >
-          <LogOut className="h-5 w-5" />
+          <LogOut className="h-4 w-4" />
           Terminate Session
         </Button>
       </div>
@@ -156,43 +145,33 @@ export const AdminLayout = ({ children, activeTab, setActiveTab, onLogout, user 
   );
 
   return (
-    <div className="flex min-h-screen bg-[#0a0a0a] text-foreground selection:bg-primary/30">
+    <div className="flex min-h-screen bg-background text-foreground font-sans">
       {/* Desktop Sidebar */}
-      <aside className="hidden w-72 lg:block sticky top-0 h-screen">
+      <aside className="hidden w-64 lg:block sticky top-0 h-screen">
         <SidebarContent />
       </aside>
 
       {/* Mobile Header */}
       <div className="flex flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/5 bg-[#0a0a0a]/80 px-6 backdrop-blur-md lg:hidden">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 px-6 backdrop-blur-md lg:hidden">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-6 w-6 text-primary" />
-            <span className="font-bold tracking-tight text-white">PROTASK</span>
+            <span className="font-bold tracking-tight text-foreground">PROTASK</span>
           </div>
           <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-            <SheetTrigger render={<Button variant="ghost" size="icon" className="text-white" />}>
+            <SheetTrigger render={<Button variant="ghost" size="icon" className="text-foreground" />}>
               <Menu className="h-6 w-6" />
             </SheetTrigger>
-            <SheetContent side="left" className="p-0 border-r-white/5 w-72">
+            <SheetContent side="left" className="p-0 border-r-border w-64">
               <SidebarContent />
             </SheetContent>
           </Sheet>
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto p-6 lg:p-10">
+        <main className="flex-1 p-6 lg:p-10">
           <div className="mx-auto max-w-7xl">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
-              >
-                {children}
-              </motion.div>
-            </AnimatePresence>
+            {children}
           </div>
         </main>
       </div>

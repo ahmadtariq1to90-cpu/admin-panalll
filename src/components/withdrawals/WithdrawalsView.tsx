@@ -2,8 +2,6 @@ import React from 'react';
 import { 
   Wallet, 
   Search, 
-  Filter, 
-  MoreVertical, 
   CheckCircle2, 
   XCircle, 
   Clock, 
@@ -13,7 +11,10 @@ import {
   Smartphone,
   ArrowRight,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  AlertCircle,
+  RefreshCcw,
+  MoreHorizontal
 } from 'lucide-react';
 import { 
   Table, 
@@ -26,44 +27,46 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
   DropdownMenuItem, 
   DropdownMenuLabel, 
-  DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Withdrawal } from '@/src/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { supabase, isUsingFallback } from '@/src/lib/supabase';
-import { motion } from 'motion/react';
-import { AlertCircle, RefreshCcw } from 'lucide-react';
+import { supabase } from '@/src/lib/supabase';
 
 export const WithdrawalsView = () => {
   const [activeTab, setActiveTab] = React.useState('pending');
-  const [withdrawals, setWithdrawals] = React.useState<Withdrawal[]>([]);
+  const [withdrawals, setWithdrawals] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [page, setPage] = React.useState(1);
+  const [totalCount, setTotalCount] = React.useState(0);
   const [error, setError] = React.useState<string | null>(null);
+  const pageSize = 10;
 
   const fetchWithdrawals = async () => {
     setLoading(true);
     setError(null);
     try {
-      const { data, error } = await supabase
+      const { data, count, error } = await supabase
         .from('withdrawals')
-        .select('*, users(*)')
-        .order('created_at', { ascending: false });
+        .select('*, users(*)', { count: 'exact' })
+        .eq('status', activeTab)
+        .order('created_at', { ascending: false })
+        .range((page - 1) * pageSize, page * pageSize - 1);
 
       if (error) throw error;
       setWithdrawals(data || []);
-    } catch (error: any) {
-      console.error('Error fetching withdrawals:', error);
-      setError(error.message || 'Failed to load withdrawals');
+      setTotalCount(count || 0);
+    } catch (err: any) {
+      console.error('Error fetching withdrawals:', err);
+      setError(err.message || 'Failed to load withdrawals');
       toast.error('Failed to load withdrawals');
     } finally {
       setLoading(false);
@@ -72,13 +75,10 @@ export const WithdrawalsView = () => {
 
   React.useEffect(() => {
     fetchWithdrawals();
-  }, []);
+  }, [activeTab, page]);
 
-  const filteredWithdrawals = withdrawals.filter(w => w.status === activeTab);
-
-  const handleApprove = async (withdrawal: Withdrawal) => {
+  const handleApprove = async (withdrawal: any) => {
     try {
-      // 1. Update withdrawal status
       const { error: updateError } = await supabase
         .from('withdrawals')
         .update({ status: 'approved' })
@@ -86,13 +86,11 @@ export const WithdrawalsView = () => {
 
       if (updateError) throw updateError;
 
-      // 2. Deduct balance from user
       const { data: profile } = await supabase.from('users').select('balance').eq('id', withdrawal.user_id).single();
       const newBalance = (profile?.balance || 0) - withdrawal.amount;
 
       if (newBalance < 0) {
-        toast.error('Insufficient user balance to process this withdrawal.');
-        // We might want to revert the status or mark as failed
+        toast.error('Insufficient user balance');
         return;
       }
 
@@ -103,12 +101,9 @@ export const WithdrawalsView = () => {
 
       if (balanceError) throw balanceError;
 
-      toast.success('Withdrawal approved!', {
-        description: `Payment processed and $${withdrawal.amount.toFixed(2)} deducted from user balance.`,
-      });
+      toast.success('Withdrawal approved');
       fetchWithdrawals();
-    } catch (error: any) {
-      console.error('Error approving withdrawal:', error);
+    } catch (err: any) {
       toast.error('Failed to approve withdrawal');
     }
   };
@@ -121,204 +116,154 @@ export const WithdrawalsView = () => {
         .eq('id', id);
 
       if (error) throw error;
-
-      toast.error('Withdrawal rejected.', {
-        description: 'The request has been cancelled.',
-      });
+      toast.success('Withdrawal rejected');
       fetchWithdrawals();
-    } catch (error: any) {
-      console.error('Error rejecting withdrawal:', error);
+    } catch (err: any) {
       toast.error('Failed to reject withdrawal');
     }
   };
 
   const getMethodIcon = (method: string) => {
-    if (!method) return <Wallet className="h-4 w-4" />;
+    if (!method) return <Wallet className="h-3.5 w-3.5" />;
     switch (method.toLowerCase()) {
-      case 'paypal': return <CreditCard className="h-4 w-4" />;
-      case 'bank transfer': return <Banknote className="h-4 w-4" />;
-      case 'mobile money': return <Smartphone className="h-4 w-4" />;
-      default: return <Wallet className="h-4 w-4" />;
+      case 'paypal': return <CreditCard className="h-3.5 w-3.5" />;
+      case 'bank transfer': return <Banknote className="h-3.5 w-3.5" />;
+      case 'mobile money': return <Smartphone className="h-3.5 w-3.5" />;
+      default: return <Wallet className="h-3.5 w-3.5" />;
     }
   };
 
-  return (
-    <div className="space-y-10">
-      {isUsingFallback && (
-        <motion.div 
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-center gap-3 text-amber-500"
-        >
-          <AlertCircle className="h-5 w-5" />
-          <div className="text-xs font-medium">
-            <p className="font-bold uppercase tracking-wider mb-1">Warning: Using Fallback Credentials</p>
-            <p className="opacity-80">You are seeing data from a default project. Configure your own Supabase credentials in the Secrets panel.</p>
-          </div>
-        </motion.div>
-      )}
+  const totalPages = Math.ceil(totalCount / pageSize);
 
-      {error && (
-        <motion.div 
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 flex items-center justify-between gap-3 text-rose-500"
-        >
-          <div className="flex items-center gap-3">
-            <AlertCircle className="h-5 w-5" />
-            <div className="text-xs font-medium">
-              <p className="font-bold uppercase tracking-wider mb-1">Database Error</p>
-              <p className="opacity-80">{error}</p>
-            </div>
-          </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={fetchWithdrawals}
-            className="h-8 text-[10px] font-bold uppercase tracking-widest hover:bg-rose-500/10"
-          >
-            <RefreshCcw className="h-3 w-3 mr-2" />
-            Retry
-          </Button>
-        </motion.div>
-      )}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2 text-primary font-mono text-[10px] uppercase tracking-[0.3em]">
-          <div className="h-1 w-1 rounded-full bg-primary animate-pulse" />
-          Financial Outflow Monitoring
+  return (
+    <div className="space-y-8">
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2 text-primary font-bold text-[10px] uppercase tracking-[0.2em]">
+          <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+          Financial Monitoring
         </div>
-        <h1 className="text-4xl font-bold tracking-tight text-white">Withdrawal Requests</h1>
-        <p className="text-muted-foreground max-w-2xl">
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Withdrawal Requests</h1>
+        <p className="text-muted-foreground text-sm max-w-2xl">
           Authorize capital distribution, validate payment destinations, and maintain transaction integrity.
         </p>
       </div>
 
-      <Tabs defaultValue="pending" onValueChange={setActiveTab} className="w-full">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <TabsList className="bg-black/40 border border-white/5 p-1 h-12">
-            <TabsTrigger value="pending" className="gap-2 h-10 px-6 data-[state=active]:bg-primary data-[state=active]:text-black font-mono text-[10px] uppercase tracking-widest transition-all">
+      <Tabs defaultValue="pending" onValueChange={(val) => { setActiveTab(val); setPage(1); }} className="w-full">
+        <div className="flex flex-col sm:flex-row gap-6 items-center justify-between">
+          <TabsList className="bg-muted/50 border border-border p-1 h-11 rounded-xl">
+            <TabsTrigger value="pending" className="gap-2 h-9 px-6 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm font-bold text-[10px] uppercase tracking-widest transition-all rounded-lg">
               <Clock className="h-3 w-3" />
               Pending
-              <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-[10px] bg-white/10 text-white border-none">
-                {withdrawals.filter(w => w.status === 'pending').length}
-              </Badge>
             </TabsTrigger>
-            <TabsTrigger value="approved" className="gap-2 h-10 px-6 data-[state=active]:bg-emerald-500 data-[state=active]:text-black font-mono text-[10px] uppercase tracking-widest transition-all">
+            <TabsTrigger value="approved" className="gap-2 h-9 px-6 data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm font-bold text-[10px] uppercase tracking-widest transition-all rounded-lg">
               <CheckCircle2 className="h-3 w-3" />
               Processed
             </TabsTrigger>
-            <TabsTrigger value="rejected" className="gap-2 h-10 px-6 data-[state=active]:bg-rose-500 data-[state=active]:text-black font-mono text-[10px] uppercase tracking-widest transition-all">
+            <TabsTrigger value="rejected" className="gap-2 h-9 px-6 data-[state=active]:bg-white data-[state=active]:text-rose-600 data-[state=active]:shadow-sm font-bold text-[10px] uppercase tracking-widest transition-all rounded-lg">
               <XCircle className="h-3 w-3" />
               Rejected
             </TabsTrigger>
           </TabsList>
           
-          <div className="flex items-center gap-3">
-            <div className="relative w-full max-w-xs group">
-              <div className="absolute -inset-1 bg-primary/20 blur-sm rounded-lg opacity-0 group-focus-within:opacity-100 transition-opacity" />
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
-              <Input placeholder="Search transactions..." className="pl-10 h-10 bg-[#0d0d0d] border-white/5 focus:border-primary/50 transition-all relative z-10 font-mono text-xs" />
-            </div>
-            <Button variant="ghost" className="h-10 w-10 p-0 border border-white/5 text-muted-foreground/60 hover:text-white hover:bg-white/5">
-              <Filter className="h-4 w-4" />
-            </Button>
+          <div className="relative w-full sm:max-w-xs group">
+            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50 group-focus-within:text-primary transition-colors" />
+            <Input placeholder="Search transactions..." className="pl-10 h-11 bg-card border-border focus:border-primary/50 focus:ring-primary/20 transition-all rounded-xl" />
           </div>
         </div>
 
+        {error && (
+          <div className="mt-8 bg-rose-50 border border-rose-200 rounded-xl p-4 flex items-center justify-between gap-3 text-rose-700">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="h-5 w-5" />
+              <div className="text-xs font-medium">
+                <p className="font-bold uppercase tracking-wider mb-0.5">Database Error</p>
+                <p className="opacity-80">{error}</p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" onClick={fetchWithdrawals} className="h-8 text-[10px] font-bold uppercase tracking-widest bg-white border-rose-200 hover:bg-rose-50">
+              <RefreshCcw className="h-3 w-3 mr-2" />
+              Retry
+            </Button>
+          </div>
+        )}
+
         <TabsContent value={activeTab} className="mt-8">
-          <Card className="border-white/5 bg-[#0d0d0d] shadow-2xl overflow-hidden">
+          <Card className="border-border bg-card shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <Table>
-                <TableHeader className="bg-black/40 border-b border-white/5">
-                  <TableRow className="hover:bg-transparent border-none">
-                    <TableHead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60 py-4">Personnel</TableHead>
-                    <TableHead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60 py-4">Capital Amount</TableHead>
-                    <TableHead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60 py-4">Transfer Method</TableHead>
-                    <TableHead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60 py-4">Destination Data</TableHead>
-                    <TableHead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60 py-4">Timestamp</TableHead>
-                    <TableHead className="text-right text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60 py-4">Operations</TableHead>
+                <TableHeader className="bg-muted/30">
+                  <TableRow className="hover:bg-transparent border-border">
+                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 py-4">Personnel</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 py-4">Amount</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 py-4">Method</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 py-4">Destination</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 py-4">Timestamp</TableHead>
+                    <TableHead className="text-right text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 py-4">Operations</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     Array(5).fill(0).map((_, i) => (
-                      <TableRow key={i} className="border-white/5">
-                        <TableCell colSpan={6} className="py-8">
-                          <div className="flex items-center gap-4">
-                            <Skeleton className="h-10 w-10 rounded-full bg-white/5" />
-                            <div className="space-y-2 flex-1">
-                              <Skeleton className="h-4 w-1/3 bg-white/5" />
-                              <Skeleton className="h-3 w-1/4 bg-white/5" />
-                            </div>
-                          </div>
-                        </TableCell>
+                      <TableRow key={i} className="border-border">
+                        <TableCell colSpan={6} className="py-6"><Skeleton className="h-10 w-full bg-muted" /></TableCell>
                       </TableRow>
                     ))
-                  ) : filteredWithdrawals.length === 0 ? (
+                  ) : withdrawals.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="h-60 text-center text-muted-foreground/40 font-mono text-xs uppercase tracking-widest">
-                        No {activeTab} withdrawal requests detected
+                      <TableCell colSpan={6} className="h-40 text-center text-muted-foreground/40 font-bold text-[10px] uppercase tracking-widest">
+                        No {activeTab} requests found
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredWithdrawals.map((withdrawal) => (
-                      <TableRow key={withdrawal.id} className="border-white/5 hover:bg-white/[0.02] transition-colors group">
-                        <TableCell className="py-4">
+                    withdrawals.map((withdrawal) => (
+                      <TableRow key={withdrawal.id} className="hover:bg-muted/20 transition-colors border-border group">
+                        <TableCell>
                           <div className="flex flex-col">
-                            <span className="font-bold text-sm text-white group-hover:text-primary transition-colors">{withdrawal.users?.full_name || 'Anonymous'}</span>
-                            <span className="text-[10px] font-mono text-muted-foreground/60">{withdrawal.users?.email}</span>
+                            <span className="text-xs font-bold text-foreground">{withdrawal.users?.full_name || 'Anonymous'}</span>
+                            <span className="text-[10px] text-muted-foreground font-medium">{withdrawal.users?.email}</span>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-1.5 font-mono font-bold text-rose-500 text-sm">
-                            <DollarSign className="h-3 w-3 opacity-50" />
-                            {withdrawal.amount.toFixed(2)}
-                          </div>
+                          <span className="text-xs font-bold text-rose-600">-${withdrawal.amount.toFixed(2)}</span>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2 text-[10px] font-mono text-white/80 uppercase tracking-wider">
-                            <div className="p-1.5 rounded-md bg-white/5 border border-white/5">
+                          <div className="flex items-center gap-2 text-[10px] font-bold text-foreground uppercase tracking-wider">
+                            <div className="p-1.5 rounded-lg bg-muted border border-border text-muted-foreground">
                               {getMethodIcon(withdrawal.payment_method)}
                             </div>
                             {withdrawal.payment_method}
                           </div>
                         </TableCell>
                         <TableCell>
-                          <code className="rounded-md bg-black border border-white/5 px-2 py-1 text-[10px] font-mono font-bold text-primary/80">
+                          <code className="text-[10px] font-bold text-primary bg-primary/5 px-2 py-1 rounded-md border border-primary/10">
                             {withdrawal.payment_details}
                           </code>
                         </TableCell>
                         <TableCell>
-                          <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-2 text-[10px] font-mono text-muted-foreground/60">
-                              <Clock className="h-3 w-3 opacity-40" />
-                              {new Date(withdrawal.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
-                            </div>
-                          </div>
+                          <span className="text-[10px] text-muted-foreground font-medium">
+                            {new Date(withdrawal.created_at).toLocaleDateString()}
+                          </span>
                         </TableCell>
                         <TableCell className="text-right">
                           <DropdownMenu>
-                            <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="hover:bg-white/5 text-muted-foreground/60 hover:text-white" />}>
-                              <MoreVertical className="h-4 w-4" />
+                            <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/5" />}>
+                              <MoreHorizontal className="h-4 w-4" />
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-56 bg-black border-white/10 text-white">
-                              <DropdownMenuLabel className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60">Payout Operations</DropdownMenuLabel>
-                              <DropdownMenuSeparator className="bg-white/5" />
+                            <DropdownMenuContent align="end" className="w-48 p-1 border-border bg-card shadow-lg">
+                              <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 px-2 py-1.5">Payout Operations</DropdownMenuLabel>
                               <DropdownMenuItem 
-                                className="gap-3 text-xs font-medium focus:bg-emerald-500/10 focus:text-emerald-500 cursor-pointer text-emerald-500/80"
+                                className="text-xs font-medium focus:bg-emerald-50 focus:text-white cursor-pointer rounded-md"
                                 onClick={() => handleApprove(withdrawal)}
                               >
-                                <CheckCircle2 className="h-4 w-4 opacity-60" /> Authorize & Process
+                                <CheckCircle2 className="h-3.5 w-3.5 mr-2" />
+                                Authorize Payout
                               </DropdownMenuItem>
                               <DropdownMenuItem 
-                                className="gap-3 text-xs font-medium focus:bg-rose-500/10 focus:text-rose-500 cursor-pointer text-rose-500/80"
+                                className="text-xs font-medium focus:bg-rose-50 focus:text-rose-600 cursor-pointer rounded-md"
                                 onClick={() => handleReject(withdrawal.id)}
                               >
-                                <XCircle className="h-4 w-4 opacity-60" /> Deny Request
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator className="bg-white/5" />
-                              <DropdownMenuItem className="gap-3 text-xs font-medium focus:bg-white/5 focus:text-primary cursor-pointer">
-                                <ArrowRight className="h-4 w-4 opacity-60" /> Audit User History
+                                <XCircle className="h-3.5 w-3.5 mr-2" />
+                                Deny Request
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -329,22 +274,39 @@ export const WithdrawalsView = () => {
                 </TableBody>
               </Table>
             </div>
-            <div className="bg-black/40 border-t border-white/5 p-4 flex items-center justify-between">
-              <p className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest">
-                Showing <span className="text-white font-bold">{filteredWithdrawals.length}</span> of <span className="text-white font-bold">{withdrawals.length}</span> transaction records
-              </p>
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 border border-white/5 text-muted-foreground/40 hover:text-white hover:bg-white/5" disabled>
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 border border-white/5 text-muted-foreground/40 hover:text-white hover:bg-white/5" disabled>
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
           </Card>
         </TabsContent>
       </Tabs>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between bg-card border border-border p-4 rounded-xl shadow-sm">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+            Showing Page {page} of {totalPages}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === 1}
+              onClick={() => setPage(p => p - 1)}
+              className="h-8 px-3 text-[10px] font-bold uppercase tracking-widest bg-background border-border hover:bg-muted"
+            >
+              <ChevronLeft className="h-3 w-3 mr-1" />
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === totalPages}
+              onClick={() => setPage(p => p + 1)}
+              className="h-8 px-3 text-[10px] font-bold uppercase tracking-widest bg-background border-border hover:bg-muted"
+            >
+              Next
+              <ChevronRight className="h-3 w-3 ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

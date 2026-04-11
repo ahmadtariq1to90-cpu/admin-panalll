@@ -25,6 +25,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
 import { 
   Table, 
   TableBody, 
@@ -36,7 +37,6 @@ import {
 import { User, TaskSubmission, Withdrawal } from '@/src/types';
 import { supabase } from '@/src/lib/supabase';
 import { toast } from 'sonner';
-import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
 
 interface UserDetailViewProps {
@@ -74,8 +74,8 @@ export const UserDetailView = ({ user, onBack, onUpdate }: UserDetailViewProps) 
 
       setSubmissions(subsRes.data || []);
       setWithdrawals(withRes.data || []);
-    } catch (error: any) {
-      console.error('Error fetching user history:', error);
+    } catch (err: any) {
+      console.error('Error fetching user history:', err);
       toast.error('Failed to load user history');
     } finally {
       setHistoryLoading(false);
@@ -119,9 +119,9 @@ export const UserDetailView = ({ user, onBack, onUpdate }: UserDetailViewProps) 
       toast.success('User profile updated successfully');
       onUpdate(formData);
       setEditing(false);
-    } catch (error: any) {
-      console.error('Error updating user:', error);
-      toast.error(error.message || 'Failed to update user profile');
+    } catch (err: any) {
+      console.error('Error updating user:', err);
+      toast.error(err.message || 'Failed to update user profile');
     } finally {
       setLoading(false);
     }
@@ -145,10 +145,10 @@ export const UserDetailView = ({ user, onBack, onUpdate }: UserDetailViewProps) 
             name={name}
             value={value || ''}
             onChange={handleChange}
-            className="h-9 bg-black/40 border-white/5 focus:border-primary/50 text-sm font-mono"
+            className="h-10 bg-background border-border focus:border-primary/50 text-sm font-medium rounded-xl"
           />
         ) : (
-          <div className="h-9 flex items-center px-3 rounded-md bg-white/5 border border-transparent text-sm font-medium text-white">
+          <div className="h-10 flex items-center px-4 rounded-xl bg-muted/30 border border-border/50 text-sm font-medium text-foreground">
             {value || 'N/A'}
           </div>
         )}
@@ -162,7 +162,7 @@ export const UserDetailView = ({ user, onBack, onUpdate }: UserDetailViewProps) 
         <Button 
           variant="ghost" 
           onClick={onBack}
-          className="gap-2 text-muted-foreground hover:text-white hover:bg-white/5"
+          className="gap-2 text-muted-foreground hover:text-primary hover:bg-primary/5 rounded-xl h-10"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Directory
@@ -176,7 +176,7 @@ export const UserDetailView = ({ user, onBack, onUpdate }: UserDetailViewProps) 
                   setEditing(false);
                   setFormData(user);
                 }}
-                className="text-rose-500 hover:text-rose-400 hover:bg-rose-500/10"
+                className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl h-10 px-4 text-xs font-bold uppercase tracking-widest"
               >
                 <X className="h-4 w-4 mr-2" />
                 Cancel
@@ -184,7 +184,7 @@ export const UserDetailView = ({ user, onBack, onUpdate }: UserDetailViewProps) 
               <Button 
                 onClick={handleSave}
                 disabled={loading}
-                className="bg-primary text-black hover:bg-primary/90"
+                className="bg-primary text-white hover:bg-primary/90 rounded-xl h-10 px-6 text-xs font-bold uppercase tracking-widest shadow-sm"
               >
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
                 Save Changes
@@ -193,7 +193,7 @@ export const UserDetailView = ({ user, onBack, onUpdate }: UserDetailViewProps) 
           ) : (
             <Button 
               onClick={() => setEditing(true)}
-              className="bg-white/5 border border-white/10 text-white hover:bg-white/10"
+              className="bg-white border border-border text-foreground hover:bg-muted rounded-xl h-10 px-6 text-xs font-bold uppercase tracking-widest shadow-sm"
             >
               <Edit2 className="h-4 w-4 mr-2" />
               Edit Profile
@@ -205,77 +205,74 @@ export const UserDetailView = ({ user, onBack, onUpdate }: UserDetailViewProps) 
       <div className="grid gap-8 lg:grid-cols-3">
         {/* Left Column: Profile Summary */}
         <div className="space-y-6">
-          <Card className="border-white/5 bg-[#0d0d0d] overflow-hidden">
-            <div className="h-24 bg-gradient-to-r from-primary/20 to-primary/5" />
+          <Card className="border-border bg-card shadow-sm overflow-hidden rounded-2xl">
+            <div className="h-24 bg-gradient-to-r from-primary/10 to-primary/5" />
             <CardContent className="relative pt-0">
               <div className="flex flex-col items-center -mt-12 text-center">
-                <div className="relative group">
-                  <div className="absolute -inset-1 bg-primary/20 blur-sm rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <Avatar className="h-24 w-24 border-4 border-[#0d0d0d] relative z-10">
-                    <AvatarImage src={user.avatar_url || user.profile_image_url || user.profile_pic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`} />
-                    <AvatarFallback className="bg-primary/10 text-primary text-xl font-bold">
-                      {user.first_name?.charAt(0) || user.email.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                </div>
+                <Avatar className="h-24 w-24 border-4 border-card shadow-xl">
+                  <AvatarImage src={user.avatar_url || user.profile_image_url || user.profile_pic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`} />
+                  <AvatarFallback className="bg-primary/10 text-primary text-xl font-bold">
+                    {user.first_name?.charAt(0) || user.email.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
                 <div className="mt-4 space-y-1">
-                  <h2 className="text-2xl font-bold text-white">
+                  <h2 className="text-2xl font-bold text-foreground">
                     {user.first_name} {user.last_name}
                   </h2>
-                  <p className="text-sm text-muted-foreground font-mono">{user.email}</p>
+                  <p className="text-xs text-muted-foreground font-medium">{user.email}</p>
                 </div>
                 <div className="mt-6 flex flex-wrap justify-center gap-2">
-                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 capitalize font-mono text-[10px] tracking-widest">
+                  <Badge variant="outline" className="bg-primary/5 text-primary border-primary/10 capitalize font-bold text-[10px] tracking-widest px-3 py-1 rounded-full">
                     <Shield className="h-3 w-3 mr-1.5" />
                     {user.role}
                   </Badge>
-                  <Badge variant="outline" className="bg-white/5 text-muted-foreground border-white/10 font-mono text-[10px] tracking-widest">
+                  <Badge variant="outline" className="bg-muted text-muted-foreground border-border font-bold text-[10px] tracking-widest px-3 py-1 rounded-full">
                     ID: {user.id.slice(0, 8)}
                   </Badge>
                 </div>
               </div>
 
-              <div className="mt-8 pt-8 border-t border-white/5 grid grid-cols-2 gap-4">
+              <div className="mt-8 pt-8 border-t border-border grid grid-cols-2 gap-4">
                 <div className="text-center space-y-1">
-                  <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60">Balance</p>
-                  <p className="text-lg font-bold text-emerald-500 font-mono">${user.balance.toFixed(2)}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Balance</p>
+                  <p className="text-lg font-bold text-emerald-600">${user.balance.toFixed(2)}</p>
                 </div>
                 <div className="text-center space-y-1">
-                  <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60">Earnings</p>
-                  <p className="text-lg font-bold text-primary font-mono">${user.referral_earnings.toFixed(2)}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Earnings</p>
+                  <p className="text-lg font-bold text-primary">${user.referral_earnings.toFixed(2)}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-white/5 bg-[#0d0d0d]">
-            <CardHeader>
-              <CardTitle className="text-sm font-bold uppercase tracking-widest text-white flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-primary" />
+          <Card className="border-border bg-card shadow-sm rounded-2xl overflow-hidden">
+            <CardHeader className="bg-muted/30 border-b border-border py-4">
+              <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-foreground flex items-center gap-2">
+                <TrendingUp className="h-3.5 w-3.5 text-primary" />
                 Quick Stats
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5">
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center justify-between p-3.5 rounded-xl bg-muted/30 border border-border/50">
                 <div className="flex items-center gap-3">
                   <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                  <span className="text-xs text-muted-foreground">Tasks Completed</span>
+                  <span className="text-xs font-medium text-muted-foreground">Tasks Completed</span>
                 </div>
-                <span className="text-sm font-bold text-white font-mono">{user.total_tasks_completed}</span>
+                <span className="text-sm font-bold text-foreground">{user.total_tasks_completed}</span>
               </div>
-              <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5">
+              <div className="flex items-center justify-between p-3.5 rounded-xl bg-muted/30 border border-border/50">
                 <div className="flex items-center gap-3">
                   <CreditCard className="h-4 w-4 text-rose-500" />
-                  <span className="text-xs text-muted-foreground">Total Withdrawals</span>
+                  <span className="text-xs font-medium text-muted-foreground">Total Withdrawals</span>
                 </div>
-                <span className="text-sm font-bold text-white font-mono">${user.total_withdraw.toFixed(2)}</span>
+                <span className="text-sm font-bold text-foreground">${user.total_withdraw.toFixed(2)}</span>
               </div>
-              <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5">
+              <div className="flex items-center justify-between p-3.5 rounded-xl bg-muted/30 border border-border/50">
                 <div className="flex items-center gap-3">
                   <Clock className="h-4 w-4 text-blue-500" />
-                  <span className="text-xs text-muted-foreground">Member Since</span>
+                  <span className="text-xs font-medium text-muted-foreground">Member Since</span>
                 </div>
-                <span className="text-sm font-bold text-white font-mono">
+                <span className="text-sm font-bold text-foreground">
                   {new Date(user.created_at).toLocaleDateString()}
                 </span>
               </div>
@@ -286,28 +283,28 @@ export const UserDetailView = ({ user, onBack, onUpdate }: UserDetailViewProps) 
         {/* Right Column: Detailed Tabs */}
         <div className="lg:col-span-2">
           <Tabs defaultValue="basic" className="w-full">
-            <TabsList className="bg-black/40 border border-white/5 p-1 h-12 w-full justify-start">
-              <TabsTrigger value="basic" className="gap-2 h-10 px-6 data-[state=active]:bg-primary data-[state=active]:text-black font-mono text-[10px] uppercase tracking-widest transition-all">
+            <TabsList className="bg-muted/50 border border-border p-1 h-11 w-full justify-start rounded-xl">
+              <TabsTrigger value="basic" className="gap-2 h-9 px-6 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm font-bold text-[10px] uppercase tracking-widest transition-all rounded-lg">
                 <UserIcon className="h-3 w-3" />
                 Basic Info
               </TabsTrigger>
-              <TabsTrigger value="stats" className="gap-2 h-10 px-6 data-[state=active]:bg-primary data-[state=active]:text-black font-mono text-[10px] uppercase tracking-widest transition-all">
+              <TabsTrigger value="stats" className="gap-2 h-9 px-6 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm font-bold text-[10px] uppercase tracking-widest transition-all rounded-lg">
                 <TrendingUp className="h-3 w-3" />
                 Account Stats
               </TabsTrigger>
-              <TabsTrigger value="history" className="gap-2 h-10 px-6 data-[state=active]:bg-primary data-[state=active]:text-black font-mono text-[10px] uppercase tracking-widest transition-all">
+              <TabsTrigger value="history" className="gap-2 h-9 px-6 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm font-bold text-[10px] uppercase tracking-widest transition-all rounded-lg">
                 <History className="h-3 w-3" />
                 Activity History
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="basic" className="mt-6 space-y-6">
-              <Card className="border-white/5 bg-[#0d0d0d]">
-                <CardHeader>
-                  <CardTitle className="text-lg font-bold text-white">Identity & Contact</CardTitle>
-                  <CardDescription>Core personnel identification data</CardDescription>
+              <Card className="border-border bg-card shadow-sm rounded-2xl overflow-hidden">
+                <CardHeader className="bg-muted/30 border-b border-border">
+                  <CardTitle className="text-sm font-bold text-foreground uppercase tracking-wider">Identity & Contact</CardTitle>
+                  <CardDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Core personnel identification data</CardDescription>
                 </CardHeader>
-                <CardContent className="grid gap-6 md:grid-cols-2">
+                <CardContent className="p-6 grid gap-6 md:grid-cols-2">
                   {renderInfoField('First Name', formData.first_name, 'first_name', UserIcon)}
                   {renderInfoField('Last Name', formData.last_name, 'last_name', UserIcon)}
                   {renderInfoField('Email Address', formData.email, 'email', Mail)}
@@ -319,12 +316,12 @@ export const UserDetailView = ({ user, onBack, onUpdate }: UserDetailViewProps) 
                 </CardContent>
               </Card>
 
-              <Card className="border-white/5 bg-[#0d0d0d]">
-                <CardHeader>
-                  <CardTitle className="text-lg font-bold text-white">Location & Security</CardTitle>
-                  <CardDescription>Geographic and system access parameters</CardDescription>
+              <Card className="border-border bg-card shadow-sm rounded-2xl overflow-hidden">
+                <CardHeader className="bg-muted/30 border-b border-border">
+                  <CardTitle className="text-sm font-bold text-foreground uppercase tracking-wider">Location & Security</CardTitle>
+                  <CardDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Geographic and system access parameters</CardDescription>
                 </CardHeader>
-                <CardContent className="grid gap-6 md:grid-cols-2">
+                <CardContent className="p-6 grid gap-6 md:grid-cols-2">
                   {renderInfoField('Country', formData.country, 'country', Globe)}
                   {renderInfoField('City', formData.city, 'city', MapPin)}
                   {renderInfoField('Postal Code', formData.postal_code, 'postal_code', MapPin)}
@@ -336,12 +333,12 @@ export const UserDetailView = ({ user, onBack, onUpdate }: UserDetailViewProps) 
             </TabsContent>
 
             <TabsContent value="stats" className="mt-6 space-y-6">
-              <Card className="border-white/5 bg-[#0d0d0d]">
-                <CardHeader>
-                  <CardTitle className="text-lg font-bold text-white">Financial Telemetry</CardTitle>
-                  <CardDescription>Real-time capital and yield monitoring</CardDescription>
+              <Card className="border-border bg-card shadow-sm rounded-2xl overflow-hidden">
+                <CardHeader className="bg-muted/30 border-b border-border">
+                  <CardTitle className="text-sm font-bold text-foreground uppercase tracking-wider">Financial Telemetry</CardTitle>
+                  <CardDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Real-time capital and yield monitoring</CardDescription>
                 </CardHeader>
-                <CardContent className="grid gap-6 md:grid-cols-2">
+                <CardContent className="p-6 grid gap-6 md:grid-cols-2">
                   {renderInfoField('Current Balance', formData.balance, 'balance', DollarSign)}
                   {renderInfoField('Referral Earnings', formData.referral_earnings, 'referral_earnings', TrendingUp)}
                   {renderInfoField('Total Withdrawn', formData.total_withdraw, 'total_withdraw', CreditCard)}
@@ -351,48 +348,48 @@ export const UserDetailView = ({ user, onBack, onUpdate }: UserDetailViewProps) 
             </TabsContent>
 
             <TabsContent value="history" className="mt-6 space-y-6">
-              <Card className="border-white/5 bg-[#0d0d0d]">
-                <CardHeader>
-                  <CardTitle className="text-lg font-bold text-white">Task Submission History</CardTitle>
-                  <CardDescription>Audit log of all personnel task engagements</CardDescription>
+              <Card className="border-border bg-card shadow-sm rounded-2xl overflow-hidden">
+                <CardHeader className="bg-muted/30 border-b border-border">
+                  <CardTitle className="text-sm font-bold text-foreground uppercase tracking-wider">Task Submission History</CardTitle>
+                  <CardDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Audit log of all personnel task engagements</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-0">
                   <div className="overflow-x-auto">
                     <Table>
-                      <TableHeader className="bg-black/20">
-                        <TableRow className="border-white/5">
-                          <TableHead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60">Task Name</TableHead>
-                          <TableHead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60">Reward</TableHead>
-                          <TableHead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60">Status</TableHead>
-                          <TableHead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60">Timestamp</TableHead>
+                      <TableHeader className="bg-muted/10">
+                        <TableRow className="border-border">
+                          <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 py-4">Task Name</TableHead>
+                          <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 py-4">Reward</TableHead>
+                          <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 py-4">Status</TableHead>
+                          <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 py-4">Timestamp</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {historyLoading ? (
                           Array(3).fill(0).map((_, i) => (
-                            <TableRow key={i} className="border-white/5">
-                              <TableCell colSpan={4} className="py-4"><Loader2 className="h-4 w-4 animate-spin mx-auto opacity-20" /></TableCell>
+                            <TableRow key={i} className="border-border">
+                              <TableCell colSpan={4} className="py-6"><Skeleton className="h-8 w-full bg-muted" /></TableCell>
                             </TableRow>
                           ))
                         ) : submissions.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={4} className="h-32 text-center text-muted-foreground/40 font-mono text-xs uppercase tracking-widest">No task history detected</TableCell>
+                            <TableCell colSpan={4} className="h-32 text-center text-muted-foreground/40 font-bold text-[10px] uppercase tracking-widest">No task history detected</TableCell>
                           </TableRow>
                         ) : (
                           submissions.map((sub) => (
-                            <TableRow key={sub.id} className="border-white/5 hover:bg-white/[0.02]">
-                              <TableCell className="font-medium text-white text-xs">{sub.tasks?.title}</TableCell>
-                              <TableCell className="font-mono text-emerald-500 text-xs font-bold">${sub.tasks?.reward.toFixed(2)}</TableCell>
+                            <TableRow key={sub.id} className="border-border hover:bg-muted/20 transition-colors">
+                              <TableCell className="font-bold text-foreground text-xs">{sub.tasks?.title}</TableCell>
+                              <TableCell className="font-bold text-emerald-600 text-xs">+${sub.tasks?.reward.toFixed(2)}</TableCell>
                               <TableCell>
                                 <Badge variant="outline" className={cn(
-                                  "text-[10px] font-mono uppercase tracking-tighter border-none",
-                                  sub.status === 'approved' ? "text-emerald-500 bg-emerald-500/10" :
-                                  sub.status === 'pending' ? "text-amber-500 bg-amber-500/10" : "text-rose-500 bg-rose-500/10"
+                                  "text-[10px] font-bold uppercase tracking-widest border-none px-2 py-0.5 rounded-full",
+                                  sub.status === 'approved' ? "text-emerald-600 bg-emerald-50" :
+                                  sub.status === 'pending' ? "text-amber-600 bg-amber-50" : "text-rose-600 bg-rose-50"
                                 )}>
                                   {sub.status}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="text-[10px] font-mono text-muted-foreground/60">
+                              <TableCell className="text-[10px] font-medium text-muted-foreground">
                                 {new Date(sub.created_at).toLocaleDateString()}
                               </TableCell>
                             </TableRow>
@@ -404,48 +401,48 @@ export const UserDetailView = ({ user, onBack, onUpdate }: UserDetailViewProps) 
                 </CardContent>
               </Card>
 
-              <Card className="border-white/5 bg-[#0d0d0d]">
-                <CardHeader>
-                  <CardTitle className="text-lg font-bold text-white">Withdrawal History</CardTitle>
-                  <CardDescription>Audit log of all capital distribution requests</CardDescription>
+              <Card className="border-border bg-card shadow-sm rounded-2xl overflow-hidden">
+                <CardHeader className="bg-muted/30 border-b border-border">
+                  <CardTitle className="text-sm font-bold text-foreground uppercase tracking-wider">Withdrawal History</CardTitle>
+                  <CardDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Audit log of all capital distribution requests</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-0">
                   <div className="overflow-x-auto">
                     <Table>
-                      <TableHeader className="bg-black/20">
-                        <TableRow className="border-white/5">
-                          <TableHead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60">Amount</TableHead>
-                          <TableHead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60">Method</TableHead>
-                          <TableHead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60">Status</TableHead>
-                          <TableHead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60">Timestamp</TableHead>
+                      <TableHeader className="bg-muted/10">
+                        <TableRow className="border-border">
+                          <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 py-4">Amount</TableHead>
+                          <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 py-4">Method</TableHead>
+                          <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 py-4">Status</TableHead>
+                          <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 py-4">Timestamp</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {historyLoading ? (
                           Array(3).fill(0).map((_, i) => (
-                            <TableRow key={i} className="border-white/5">
-                              <TableCell colSpan={4} className="py-4"><Loader2 className="h-4 w-4 animate-spin mx-auto opacity-20" /></TableCell>
+                            <TableRow key={i} className="border-border">
+                              <TableCell colSpan={4} className="py-6"><Skeleton className="h-8 w-full bg-muted" /></TableCell>
                             </TableRow>
                           ))
                         ) : withdrawals.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={4} className="h-32 text-center text-muted-foreground/40 font-mono text-xs uppercase tracking-widest">No withdrawal history detected</TableCell>
+                            <TableCell colSpan={4} className="h-32 text-center text-muted-foreground/40 font-bold text-[10px] uppercase tracking-widest">No withdrawal history detected</TableCell>
                           </TableRow>
                         ) : (
                           withdrawals.map((w) => (
-                            <TableRow key={w.id} className="border-white/5 hover:bg-white/[0.02]">
-                              <TableCell className="font-mono text-rose-500 text-xs font-bold">${w.amount.toFixed(2)}</TableCell>
-                              <TableCell className="text-white/80 text-xs uppercase font-mono tracking-tighter">{w.payment_method}</TableCell>
+                            <TableRow key={w.id} className="border-border hover:bg-muted/20 transition-colors">
+                              <TableCell className="font-bold text-rose-600 text-xs">-${w.amount.toFixed(2)}</TableCell>
+                              <TableCell className="text-foreground text-xs font-bold uppercase tracking-widest">{w.payment_method}</TableCell>
                               <TableCell>
                                 <Badge variant="outline" className={cn(
-                                  "text-[10px] font-mono uppercase tracking-tighter border-none",
-                                  w.status === 'approved' ? "text-emerald-500 bg-emerald-500/10" :
-                                  w.status === 'pending' ? "text-amber-500 bg-amber-500/10" : "text-rose-500 bg-rose-500/10"
+                                  "text-[10px] font-bold uppercase tracking-widest border-none px-2 py-0.5 rounded-full",
+                                  w.status === 'approved' ? "text-emerald-600 bg-emerald-50" :
+                                  w.status === 'pending' ? "text-amber-600 bg-amber-50" : "text-rose-600 bg-rose-50"
                                 )}>
                                   {w.status}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="text-[10px] font-mono text-muted-foreground/60">
+                              <TableCell className="text-[10px] font-medium text-muted-foreground">
                                 {new Date(w.created_at).toLocaleDateString()}
                               </TableCell>
                             </TableRow>
