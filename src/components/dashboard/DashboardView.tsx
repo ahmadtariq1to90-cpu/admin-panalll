@@ -32,6 +32,10 @@ import {
 } from 'recharts';
 import { motion } from 'motion/react';
 
+import { cn } from '@/lib/utils';
+import { supabase, isUsingFallback } from '@/src/lib/supabase';
+import { AlertCircle, RefreshCcw } from 'lucide-react';
+
 const data = [
   { name: 'Mon', tasks: 40, earnings: 2400 },
   { name: 'Tue', tasks: 30, earnings: 1398 },
@@ -78,10 +82,6 @@ const StatCard = ({ title, value, icon: Icon, trend, trendValue, color }: any) =
     </CardContent>
   </Card>
 );
-
-import { cn } from '@/lib/utils';
-import { supabase, isUsingFallback } from '@/src/lib/supabase';
-import { AlertCircle, RefreshCcw } from 'lucide-react';
 
 export const DashboardView = () => {
   const [stats, setStats] = React.useState({

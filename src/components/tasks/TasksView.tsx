@@ -322,7 +322,7 @@ export const TasksView = () => {
                                   </div>
                                   <DialogTitle className="text-2xl font-bold">Verification Protocol</DialogTitle>
                                   <DialogDescription className="text-muted-foreground/60 font-mono text-xs uppercase tracking-wider">
-                                    Reviewing telemetry for {submission.profiles?.full_name}
+                                    Reviewing telemetry for {submission.users?.full_name}
                                   </DialogDescription>
                                 </DialogHeader>
 

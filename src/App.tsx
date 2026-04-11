@@ -14,6 +14,7 @@ import { NotificationsView } from '@/src/components/notifications/NotificationsV
 import { LoginView } from '@/src/components/auth/LoginView';
 import { supabase } from '@/src/lib/supabase';
 import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function App() {
   const [activeTab, setActiveTab] = React.useState('dashboard');
@@ -50,17 +51,47 @@ export default function App() {
   };
 
   React.useEffect(() => {
-    // Check active session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        verifyAdminRole(session.user).then(() => setLoading(false));
-      } else {
-        setLoading(false);
+    let mounted = true;
+
+    const initAuth = async () => {
+      try {
+        console.log('Initializing auth session...');
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('Session error:', sessionError);
+          setAuthError('Session retrieval failed: ' + sessionError.message);
+          setLoading(false);
+          return;
+        }
+
+        if (session?.user) {
+          console.log('Session found for user:', session.user.email);
+          const isAdmin = await verifyAdminRole(session.user);
+          if (mounted) {
+            if (!isAdmin) {
+              console.warn('User is not an admin, redirecting to login');
+            }
+            setLoading(false);
+          }
+        } else {
+          console.log('No active session found');
+          if (mounted) setLoading(false);
+        }
+      } catch (err: any) {
+        console.error('Auth initialization error:', err);
+        if (mounted) {
+          setAuthError('Failed to initialize authentication: ' + (err.message || 'Unknown error'));
+          setLoading(false);
+        }
       }
-    });
+    };
+
+    initAuth();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state change event:', event);
       if (session?.user) {
         await verifyAdminRole(session.user);
       } else {
@@ -68,20 +99,38 @@ export default function App() {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null);
+    setAuthError(null);
   };
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p className="text-sm font-medium text-muted-foreground">Initializing Admin Panel...</p>
+      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a]">
+        <div className="flex flex-col items-center gap-6">
+          <div className="relative">
+            <div className="absolute -inset-4 bg-primary/20 blur-xl rounded-full animate-pulse" />
+            <Loader2 className="h-12 w-12 animate-spin text-primary relative z-10" />
+          </div>
+          <div className="text-center space-y-2">
+            <p className="text-sm font-bold text-white uppercase tracking-[0.2em]">Initializing Admin OS</p>
+            <p className="text-[10px] font-mono text-muted-foreground/60 uppercase tracking-widest">Verifying security credentials...</p>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => window.location.reload()}
+            className="mt-4 text-[10px] font-mono text-muted-foreground/40 hover:text-white uppercase tracking-widest"
+          >
+            Stuck? Click to reload
+          </Button>
         </div>
       </div>
     );
