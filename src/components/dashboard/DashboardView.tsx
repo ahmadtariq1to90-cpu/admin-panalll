@@ -80,7 +80,8 @@ const StatCard = ({ title, value, icon: Icon, trend, trendValue, color }: any) =
 );
 
 import { cn } from '@/lib/utils';
-import { supabase } from '@/src/lib/supabase';
+import { supabase, isUsingFallback } from '@/src/lib/supabase';
+import { AlertCircle, RefreshCcw } from 'lucide-react';
 
 export const DashboardView = () => {
   const [stats, setStats] = React.useState({
@@ -90,52 +91,117 @@ export const DashboardView = () => {
     totalEarnings: 0,
   });
   const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
   const [recentActivities, setRecentActivities] = React.useState<any[]>([]);
 
-  React.useEffect(() => {
-    const fetchStats = async () => {
-      setLoading(true);
-      try {
-        const [
-          { count: userCount },
-          { count: taskCount },
-          { count: withdrawalCount },
-          { data: earningsData }
-        ] = await Promise.all([
-          supabase.from('profiles').select('*', { count: 'exact', head: true }),
-          supabase.from('task_submissions').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-          supabase.from('withdrawals').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-          supabase.from('profiles').select('balance')
-        ]);
-        
-        const totalBalance = earningsData?.reduce((acc, curr) => acc + (curr.balance || 0), 0) || 0;
-
-        setStats({
-          totalUsers: userCount || 0,
-          pendingTasks: taskCount || 0,
-          pendingWithdrawals: withdrawalCount || 0,
-          totalEarnings: totalBalance,
-        });
-
-        const { data: submissions } = await supabase
-          .from('task_submissions')
-          .select('*, profiles(full_name, email), tasks(title, reward)')
-          .order('created_at', { ascending: false })
-          .limit(5);
-
-        setRecentActivities(submissions || []);
-      } catch (error) {
-        console.error('Error fetching dashboard stats:', error);
-      } finally {
-        setLoading(false);
+  const fetchStats = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Schema check for debugging
+      if (import.meta.env.DEV) {
+        const tables = ['users', 'task_submissions', 'withdrawals', 'tasks', 'referral'];
+        console.log('--- Schema Integrity Check ---');
+        for (const table of tables) {
+          const { error: tableError } = await supabase.from(table).select('*').limit(1);
+          if (tableError) {
+            console.error(`Table "${table}" check failed:`, tableError.message);
+          } else {
+            console.log(`Table "${table}" is accessible.`);
+          }
+        }
+        console.log('------------------------------');
       }
-    };
 
+      const [
+        userRes,
+        taskRes,
+        withdrawalRes,
+        earningsRes
+      ] = await Promise.all([
+        supabase.from('users').select('*', { count: 'exact', head: true }),
+        supabase.from('task_submissions').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('withdrawals').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('users').select('balance')
+      ]);
+      
+      if (userRes.error) throw userRes.error;
+      if (taskRes.error) throw taskRes.error;
+      if (withdrawalRes.error) throw withdrawalRes.error;
+      if (earningsRes.error) throw earningsRes.error;
+
+      const totalBalance = earningsRes.data?.reduce((acc, curr) => acc + (curr.balance || 0), 0) || 0;
+
+      setStats({
+        totalUsers: userRes.count || 0,
+        pendingTasks: taskRes.count || 0,
+        pendingWithdrawals: withdrawalRes.count || 0,
+        totalEarnings: totalBalance,
+      });
+
+      const { data: submissions, error: subError } = await supabase
+        .from('task_submissions')
+        .select('*, users(full_name, email), tasks(title, reward)')
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (subError) throw subError;
+      setRecentActivities(submissions || []);
+    } catch (err: any) {
+      console.error('Error fetching dashboard stats:', err);
+      setError(err.message || 'Failed to connect to database');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
     fetchStats();
   }, []);
 
   return (
     <div className="space-y-10">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {isUsingFallback && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-center gap-3 text-amber-500"
+          >
+            <AlertCircle className="h-5 w-5" />
+            <div className="text-xs font-medium">
+              <p className="font-bold uppercase tracking-wider mb-1">Warning: Using Fallback Credentials</p>
+              <p className="opacity-80">You haven't configured your own Supabase URL and Key in the Secrets panel. You are seeing data from a default project.</p>
+            </div>
+          </motion.div>
+        )}
+
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={cn(
+            "border rounded-xl p-4 flex items-center gap-3",
+            error ? "bg-rose-500/10 border-rose-500/20 text-rose-500" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-500"
+          )}
+        >
+          <div className={cn("h-2 w-2 rounded-full animate-pulse", error ? "bg-rose-500" : "bg-emerald-500")} />
+          <div className="text-xs font-medium">
+            <p className="font-bold uppercase tracking-wider mb-1">Database Status: {error ? 'Error' : 'Connected'}</p>
+            <p className="opacity-80">{error ? `Issue: ${error}` : 'Successfully connected to your Supabase instance.'}</p>
+          </div>
+          {error && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={fetchStats}
+              className="ml-auto h-8 text-[10px] font-bold uppercase tracking-widest hover:bg-rose-500/10"
+            >
+              <RefreshCcw className="h-3 w-3 mr-2" />
+              Retry
+            </Button>
+          )}
+        </motion.div>
+      </div>
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2 text-primary font-mono text-[10px] uppercase tracking-[0.3em]">
           <div className="h-1 w-1 rounded-full bg-primary animate-pulse" />
@@ -269,13 +335,13 @@ export const DashboardView = () => {
                     <div className="relative">
                       <div className="absolute -inset-1 bg-primary/20 blur-sm rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
                       <Avatar className="h-10 w-10 border border-white/10 relative z-10">
-                        <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${activity.profiles?.email}`} />
-                        <AvatarFallback className="bg-primary/10 text-primary text-xs">{activity.profiles?.full_name?.charAt(0)}</AvatarFallback>
+                        <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${activity.users?.email}`} />
+                        <AvatarFallback className="bg-primary/10 text-primary text-xs">{activity.users?.full_name?.charAt(0)}</AvatarFallback>
                       </Avatar>
                     </div>
                     <div className="flex-1 space-y-1 overflow-hidden">
                       <p className="text-sm font-bold text-white truncate group-hover:text-primary transition-colors">
-                        {activity.profiles?.full_name || 'Anonymous User'}
+                        {activity.users?.full_name || 'Anonymous User'}
                       </p>
                       <p className="text-[10px] text-muted-foreground/60 font-mono uppercase tracking-tight truncate">
                         {activity.tasks?.title || 'Unknown Task'}

@@ -1,6 +1,6 @@
 export type UserRole = 'admin' | 'user';
 
-export interface Profile {
+export interface User {
   id: string;
   email: string;
   full_name: string | null;
@@ -28,7 +28,7 @@ export interface TaskSubmission {
   status: SubmissionStatus;
   proof_url: string | null;
   created_at: string;
-  profiles?: Profile;
+  users?: User;
   tasks?: Task;
 }
 
@@ -42,7 +42,7 @@ export interface Withdrawal {
   payment_method: string;
   payment_details: string;
   created_at: string;
-  profiles?: Profile;
+  users?: User;
 }
 
 export interface Referral {
@@ -51,8 +51,8 @@ export interface Referral {
   referred_id: string;
   commission_earned: number;
   created_at: string;
-  referrer?: Profile;
-  referred?: Profile;
+  referrer?: User;
+  referred?: User;
 }
 
 export interface DashboardStats {

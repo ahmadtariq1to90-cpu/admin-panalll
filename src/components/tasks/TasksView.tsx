@@ -37,29 +37,34 @@ import {
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { motion } from 'motion/react';
 import { TaskSubmission } from '@/src/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { supabase } from '@/src/lib/supabase';
+import { supabase, isUsingFallback } from '@/src/lib/supabase';
+import { RefreshCcw } from 'lucide-react';
 
 export const TasksView = () => {
   const [activeTab, setActiveTab] = React.useState('pending');
   const [selectedSubmission, setSelectedSubmission] = React.useState<TaskSubmission | null>(null);
   const [submissions, setSubmissions] = React.useState<TaskSubmission[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
   const fetchSubmissions = async () => {
     setLoading(true);
+    setError(null);
     try {
       const { data, error } = await supabase
         .from('task_submissions')
-        .select('*, profiles(*), tasks(*)')
+        .select('*, users(*), tasks(*)')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       setSubmissions(data || []);
     } catch (error: any) {
       console.error('Error fetching submissions:', error);
+      setError(error.message || 'Failed to load submissions');
       toast.error('Failed to load submissions');
     } finally {
       setLoading(false);
@@ -86,30 +91,30 @@ export const TasksView = () => {
       const reward = submission.tasks?.reward || 0;
       
       // Fetch current balance first to be safe
-      const { data: profile } = await supabase.from('profiles').select('balance').eq('id', submission.user_id).single();
+      const { data: profile } = await supabase.from('users').select('balance').eq('id', submission.user_id).single();
       const newBalance = (profile?.balance || 0) + reward;
       
       const { error: balanceError } = await supabase
-        .from('profiles')
+        .from('users')
         .update({ balance: newBalance })
         .eq('id', submission.user_id);
 
       if (balanceError) throw balanceError;
 
       // 3. Handle Referral Commission (10%)
-      if (submission.profiles?.referred_by) {
+      if (submission.users?.referred_by) {
         const commission = reward * 0.1;
         // Find referrer by referral_code
         const { data: referrer } = await supabase
-          .from('profiles')
+          .from('users')
           .select('id, balance')
-          .eq('referral_code', submission.profiles.referred_by)
+          .eq('referral_code', submission.users.referred_by)
           .single();
 
         if (referrer) {
-          await supabase.from('profiles').update({ balance: (referrer.balance || 0) + commission }).eq('id', referrer.id);
+          await supabase.from('users').update({ balance: (referrer.balance || 0) + commission }).eq('id', referrer.id);
           // Log referral commission
-          await supabase.from('referrals').insert({
+          await supabase.from('referral').insert({
             referrer_id: referrer.id,
             referred_id: submission.user_id,
             commission_earned: commission
@@ -150,6 +155,45 @@ export const TasksView = () => {
 
   return (
     <div className="space-y-10">
+      {isUsingFallback && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-center gap-3 text-amber-500"
+        >
+          <AlertCircle className="h-5 w-5" />
+          <div className="text-xs font-medium">
+            <p className="font-bold uppercase tracking-wider mb-1">Warning: Using Fallback Credentials</p>
+            <p className="opacity-80">You are seeing data from a default project. Configure your own Supabase credentials in the Secrets panel.</p>
+          </div>
+        </motion.div>
+      )}
+
+      {error && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 flex items-center justify-between gap-3 text-rose-500"
+        >
+          <div className="flex items-center gap-3">
+            <AlertCircle className="h-5 w-5" />
+            <div className="text-xs font-medium">
+              <p className="font-bold uppercase tracking-wider mb-1">Database Error</p>
+              <p className="opacity-80">{error}</p>
+            </div>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={fetchSubmissions}
+            className="h-8 text-[10px] font-bold uppercase tracking-widest hover:bg-rose-500/10"
+          >
+            <RefreshCcw className="h-3 w-3 mr-2" />
+            Retry
+          </Button>
+        </motion.div>
+      )}
+
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2 text-primary font-mono text-[10px] uppercase tracking-[0.3em]">
           <div className="h-1 w-1 rounded-full bg-primary animate-pulse" />
@@ -232,8 +276,8 @@ export const TasksView = () => {
                       <TableRow key={submission.id} className="border-white/5 hover:bg-white/[0.02] transition-colors group">
                         <TableCell className="py-4">
                           <div className="flex flex-col">
-                            <span className="font-bold text-sm text-white group-hover:text-primary transition-colors">{submission.profiles?.full_name || 'Anonymous'}</span>
-                            <span className="text-[10px] font-mono text-muted-foreground/60">{submission.profiles?.email}</span>
+                            <span className="font-bold text-sm text-white group-hover:text-primary transition-colors">{submission.users?.full_name || 'Anonymous'}</span>
+                            <span className="text-[10px] font-mono text-muted-foreground/60">{submission.users?.email}</span>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -290,16 +334,16 @@ export const TasksView = () => {
                                         <div className="flex items-center gap-3">
                                           <Avatar className="h-10 w-10 border border-white/10">
                                             <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${submission.user_id}`} />
-                                            <AvatarFallback className="bg-primary/10 text-primary">{submission.profiles?.full_name?.charAt(0)}</AvatarFallback>
+                                            <AvatarFallback className="bg-primary/10 text-primary">{submission.users?.full_name?.charAt(0)}</AvatarFallback>
                                           </Avatar>
                                           <div className="flex flex-col">
-                                            <p className="text-sm font-bold">{submission.profiles?.full_name}</p>
-                                            <p className="text-[10px] font-mono text-muted-foreground/60">{submission.profiles?.email}</p>
+                                            <p className="text-sm font-bold">{submission.users?.full_name}</p>
+                                            <p className="text-[10px] font-mono text-muted-foreground/60">{submission.users?.email}</p>
                                           </div>
                                         </div>
                                         <div className="pt-3 border-t border-white/5 flex items-center justify-between">
                                           <span className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest">Current Balance</span>
-                                          <span className="text-sm font-mono font-bold text-emerald-500">${submission.profiles?.balance.toFixed(2)}</span>
+                                          <span className="text-sm font-mono font-bold text-emerald-500">${submission.users?.balance.toFixed(2)}</span>
                                         </div>
                                       </div>
                                     </div>

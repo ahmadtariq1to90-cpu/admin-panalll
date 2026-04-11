@@ -39,21 +39,24 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'motion/react';
-import { Profile } from '@/src/types';
+import { User } from '@/src/types';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/src/lib/supabase';
+import { supabase, isUsingFallback } from '@/src/lib/supabase';
 import { toast } from 'sonner';
+import { AlertCircle, RefreshCcw } from 'lucide-react';
 
 export const UsersView = () => {
   const [searchTerm, setSearchTerm] = React.useState('');
-  const [users, setUsers] = React.useState<Profile[]>([]);
+  const [users, setUsers] = React.useState<User[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
   const fetchUsers = async () => {
     setLoading(true);
+    setError(null);
     try {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('users')
         .select('*')
         .order('created_at', { ascending: false });
 
@@ -61,6 +64,7 @@ export const UsersView = () => {
       setUsers(data || []);
     } catch (error: any) {
       console.error('Error fetching users:', error);
+      setError(error.message || 'Failed to load users');
       toast.error('Failed to load users');
     } finally {
       setLoading(false);
@@ -78,6 +82,44 @@ export const UsersView = () => {
 
   return (
     <div className="space-y-10">
+      {isUsingFallback && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-center gap-3 text-amber-500"
+        >
+          <AlertCircle className="h-5 w-5" />
+          <div className="text-xs font-medium">
+            <p className="font-bold uppercase tracking-wider mb-1">Warning: Using Fallback Credentials</p>
+            <p className="opacity-80">You are seeing data from a default project. Configure your own Supabase credentials in the Secrets panel.</p>
+          </div>
+        </motion.div>
+      )}
+
+      {error && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 flex items-center justify-between gap-3 text-rose-500"
+        >
+          <div className="flex items-center gap-3">
+            <AlertCircle className="h-5 w-5" />
+            <div className="text-xs font-medium">
+              <p className="font-bold uppercase tracking-wider mb-1">Database Error</p>
+              <p className="opacity-80">{error}</p>
+            </div>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={fetchUsers}
+            className="h-8 text-[10px] font-bold uppercase tracking-widest hover:bg-rose-500/10"
+          >
+            <RefreshCcw className="h-3 w-3 mr-2" />
+            Retry
+          </Button>
+        </motion.div>
+      )}
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2 text-primary font-mono text-[10px] uppercase tracking-[0.3em]">
           <div className="h-1 w-1 rounded-full bg-primary animate-pulse" />

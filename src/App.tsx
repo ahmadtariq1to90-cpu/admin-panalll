@@ -26,7 +26,7 @@ export default function App() {
       if (session?.user) {
         // Verify admin role
         supabase
-          .from('profiles')
+          .from('users')
           .select('role')
           .eq('id', session.user.id)
           .single()
@@ -48,7 +48,7 @@ export default function App() {
       if (session?.user) {
         // Verify admin role again on change
         supabase
-          .from('profiles')
+          .from('users')
           .select('role')
           .eq('id', session.user.id)
           .single()

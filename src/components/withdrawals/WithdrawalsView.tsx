@@ -40,25 +40,30 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Withdrawal } from '@/src/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { supabase } from '@/src/lib/supabase';
+import { supabase, isUsingFallback } from '@/src/lib/supabase';
+import { motion } from 'motion/react';
+import { AlertCircle, RefreshCcw } from 'lucide-react';
 
 export const WithdrawalsView = () => {
   const [activeTab, setActiveTab] = React.useState('pending');
   const [withdrawals, setWithdrawals] = React.useState<Withdrawal[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
   const fetchWithdrawals = async () => {
     setLoading(true);
+    setError(null);
     try {
       const { data, error } = await supabase
         .from('withdrawals')
-        .select('*, profiles(*)')
+        .select('*, users(*)')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       setWithdrawals(data || []);
     } catch (error: any) {
       console.error('Error fetching withdrawals:', error);
+      setError(error.message || 'Failed to load withdrawals');
       toast.error('Failed to load withdrawals');
     } finally {
       setLoading(false);
@@ -82,7 +87,7 @@ export const WithdrawalsView = () => {
       if (updateError) throw updateError;
 
       // 2. Deduct balance from user
-      const { data: profile } = await supabase.from('profiles').select('balance').eq('id', withdrawal.user_id).single();
+      const { data: profile } = await supabase.from('users').select('balance').eq('id', withdrawal.user_id).single();
       const newBalance = (profile?.balance || 0) - withdrawal.amount;
 
       if (newBalance < 0) {
@@ -92,7 +97,7 @@ export const WithdrawalsView = () => {
       }
 
       const { error: balanceError } = await supabase
-        .from('profiles')
+        .from('users')
         .update({ balance: newBalance })
         .eq('id', withdrawal.user_id);
 
@@ -139,6 +144,44 @@ export const WithdrawalsView = () => {
 
   return (
     <div className="space-y-10">
+      {isUsingFallback && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-center gap-3 text-amber-500"
+        >
+          <AlertCircle className="h-5 w-5" />
+          <div className="text-xs font-medium">
+            <p className="font-bold uppercase tracking-wider mb-1">Warning: Using Fallback Credentials</p>
+            <p className="opacity-80">You are seeing data from a default project. Configure your own Supabase credentials in the Secrets panel.</p>
+          </div>
+        </motion.div>
+      )}
+
+      {error && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 flex items-center justify-between gap-3 text-rose-500"
+        >
+          <div className="flex items-center gap-3">
+            <AlertCircle className="h-5 w-5" />
+            <div className="text-xs font-medium">
+              <p className="font-bold uppercase tracking-wider mb-1">Database Error</p>
+              <p className="opacity-80">{error}</p>
+            </div>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={fetchWithdrawals}
+            className="h-8 text-[10px] font-bold uppercase tracking-widest hover:bg-rose-500/10"
+          >
+            <RefreshCcw className="h-3 w-3 mr-2" />
+            Retry
+          </Button>
+        </motion.div>
+      )}
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2 text-primary font-mono text-[10px] uppercase tracking-[0.3em]">
           <div className="h-1 w-1 rounded-full bg-primary animate-pulse" />
@@ -222,8 +265,8 @@ export const WithdrawalsView = () => {
                       <TableRow key={withdrawal.id} className="border-white/5 hover:bg-white/[0.02] transition-colors group">
                         <TableCell className="py-4">
                           <div className="flex flex-col">
-                            <span className="font-bold text-sm text-white group-hover:text-primary transition-colors">{withdrawal.profiles?.full_name || 'Anonymous'}</span>
-                            <span className="text-[10px] font-mono text-muted-foreground/60">{withdrawal.profiles?.email}</span>
+                            <span className="font-bold text-sm text-white group-hover:text-primary transition-colors">{withdrawal.users?.full_name || 'Anonymous'}</span>
+                            <span className="text-[10px] font-mono text-muted-foreground/60">{withdrawal.users?.email}</span>
                           </div>
                         </TableCell>
                         <TableCell>

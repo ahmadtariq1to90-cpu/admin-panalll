@@ -28,11 +28,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { Referral } from '@/src/types';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/src/lib/supabase';
+import { supabase, isUsingFallback } from '@/src/lib/supabase';
+import { motion } from 'motion/react';
+import { AlertCircle, RefreshCcw } from 'lucide-react';
 
 export const ReferralsView = () => {
   const [referrals, setReferrals] = React.useState<Referral[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
   const [stats, setStats] = React.useState({
     totalReferrals: 0,
     totalCommission: 0,
@@ -41,10 +44,11 @@ export const ReferralsView = () => {
 
   const fetchReferrals = async () => {
     setLoading(true);
+    setError(null);
     try {
       const { data, error } = await supabase
-        .from('referrals')
-        .select('*, referrer:profiles!referrer_id(*), referred:profiles!referred_id(*)')
+        .from('referral')
+        .select('*, referrer:users!referrer_id(*), referred:users!referred_id(*)')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -55,7 +59,10 @@ export const ReferralsView = () => {
       
       // Get unique referrers count
       const uniqueReferrers = new Set(data?.map(r => r.referrer_id)).size;
-      const { count: totalUsers } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+      const { count: totalUsers, error: userError } = await supabase.from('users').select('*', { count: 'exact', head: true });
+      
+      if (userError) throw userError;
+      
       const referralRate = totalUsers ? (uniqueReferrers / totalUsers) * 100 : 0;
 
       setStats({
@@ -66,6 +73,7 @@ export const ReferralsView = () => {
 
     } catch (error: any) {
       console.error('Error fetching referrals:', error);
+      setError(error.message || 'Failed to load referrals');
     } finally {
       setLoading(false);
     }
@@ -77,6 +85,44 @@ export const ReferralsView = () => {
 
   return (
     <div className="space-y-10">
+      {isUsingFallback && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-center gap-3 text-amber-500"
+        >
+          <AlertCircle className="h-5 w-5" />
+          <div className="text-xs font-medium">
+            <p className="font-bold uppercase tracking-wider mb-1">Warning: Using Fallback Credentials</p>
+            <p className="opacity-80">You are seeing data from a default project. Configure your own Supabase credentials in the Secrets panel.</p>
+          </div>
+        </motion.div>
+      )}
+
+      {error && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 flex items-center justify-between gap-3 text-rose-500"
+        >
+          <div className="flex items-center gap-3">
+            <AlertCircle className="h-5 w-5" />
+            <div className="text-xs font-medium">
+              <p className="font-bold uppercase tracking-wider mb-1">Database Error</p>
+              <p className="opacity-80">{error}</p>
+            </div>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={fetchReferrals}
+            className="h-8 text-[10px] font-bold uppercase tracking-widest hover:bg-rose-500/10"
+          >
+            <RefreshCcw className="h-3 w-3 mr-2" />
+            Retry
+          </Button>
+        </motion.div>
+      )}
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2 text-primary font-mono text-[10px] uppercase tracking-[0.3em]">
           <div className="h-1 w-1 rounded-full bg-primary animate-pulse" />
