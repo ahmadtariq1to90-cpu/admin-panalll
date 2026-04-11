@@ -302,16 +302,16 @@ export const TasksView = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <Dialog>
-                            <DialogTrigger asChild>
+                            <DialogTrigger render={
                               <Button 
                                 variant="ghost" 
                                 size="sm" 
                                 className="h-9 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 hover:text-primary hover:bg-primary/5 border border-white/5"
                                 onClick={() => setSelectedSubmission(submission)}
-                              >
-                                <Eye className="h-3 w-3 mr-2" />
-                                Inspect
-                              </Button>
+                              />
+                            }>
+                              <Eye className="h-3 w-3 mr-2" />
+                              Inspect
                             </DialogTrigger>
                             <DialogContent className="max-w-3xl bg-[#0d0d0d] border-white/10 text-white p-0 overflow-hidden">
                               <div className="p-8 space-y-8">

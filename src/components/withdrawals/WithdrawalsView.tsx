@@ -298,10 +298,8 @@ export const WithdrawalsView = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="hover:bg-white/5 text-muted-foreground/60 hover:text-white">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
+                            <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="hover:bg-white/5 text-muted-foreground/60 hover:text-white" />}>
+                              <MoreVertical className="h-4 w-4" />
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-56 bg-black border-white/10 text-white">
                               <DropdownMenuLabel className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60">Payout Operations</DropdownMenuLabel>

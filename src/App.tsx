@@ -54,6 +54,14 @@ export default function App() {
     let mounted = true;
 
     const initAuth = async () => {
+      // Safety timeout to prevent infinite loading
+      const timeoutId = setTimeout(() => {
+        if (mounted && loading) {
+          console.warn('Auth initialization timed out, forcing loading state to false');
+          setLoading(false);
+        }
+      }, 5000);
+
       try {
         console.log('Initializing auth session...');
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -62,6 +70,7 @@ export default function App() {
           console.error('Session error:', sessionError);
           setAuthError('Session retrieval failed: ' + sessionError.message);
           setLoading(false);
+          clearTimeout(timeoutId);
           return;
         }
 
@@ -84,6 +93,8 @@ export default function App() {
           setAuthError('Failed to initialize authentication: ' + (err.message || 'Unknown error'));
           setLoading(false);
         }
+      } finally {
+        clearTimeout(timeoutId);
       }
     };
 
@@ -164,6 +175,7 @@ export default function App() {
       activeTab={activeTab} 
       setActiveTab={setActiveTab} 
       onLogout={handleLogout}
+      user={user}
     >
       {renderContent()}
     </AdminLayout>

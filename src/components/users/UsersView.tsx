@@ -194,11 +194,9 @@ export const UsersView = () => {
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-10 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-white hover:bg-white/5 border border-white/5">
-                <Filter className="h-3 w-3 mr-2" />
-                Time: {dateFilter === 'all' ? 'All Time' : dateFilter === '7days' ? 'Last 7 Days' : 'Last 30 Days'}
-              </Button>
+            <DropdownMenuTrigger render={<Button variant="ghost" className="h-10 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-white hover:bg-white/5 border border-white/5" />}>
+              <Filter className="h-3 w-3 mr-2" />
+              Time: {dateFilter === 'all' ? 'All Time' : dateFilter === '7days' ? 'Last 7 Days' : 'Last 30 Days'}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48 bg-black border-white/10 text-white">
               <DropdownMenuItem onClick={() => setDateFilter('all')} className="text-xs font-mono uppercase tracking-widest cursor-pointer">All Time</DropdownMenuItem>
@@ -208,11 +206,9 @@ export const UsersView = () => {
           </DropdownMenu>
 
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-10 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-white hover:bg-white/5 border border-white/5">
-                <TrendingUp className="h-3 w-3 mr-2" />
-                Sort: {sortBy.replace('_', ' ')}
-              </Button>
+            <DropdownMenuTrigger render={<Button variant="ghost" className="h-10 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-white hover:bg-white/5 border border-white/5" />}>
+              <TrendingUp className="h-3 w-3 mr-2" />
+              Sort: {sortBy.replace('_', ' ')}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 bg-black border-white/10 text-white">
               <DropdownMenuItem onClick={() => setSortBy('newest')} className="text-xs font-mono uppercase tracking-widest cursor-pointer">Newest First</DropdownMenuItem>
@@ -317,10 +313,8 @@ export const UsersView = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="hover:bg-white/5 text-muted-foreground/60 hover:text-white">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
+                        <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="hover:bg-white/5 text-muted-foreground/60 hover:text-white" />}>
+                          <MoreVertical className="h-4 w-4" />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-56 bg-black border-white/10 text-white">
                           <DropdownMenuLabel className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60">Personnel Actions</DropdownMenuLabel>

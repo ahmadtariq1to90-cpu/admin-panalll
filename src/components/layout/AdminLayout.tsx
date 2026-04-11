@@ -55,9 +55,10 @@ interface AdminLayoutProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   onLogout: () => void;
+  user: any;
 }
 
-export const AdminLayout = ({ children, activeTab, setActiveTab, onLogout }: AdminLayoutProps) => {
+export const AdminLayout = ({ children, activeTab, setActiveTab, onLogout, user }: AdminLayoutProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
   const navItems = [
@@ -133,11 +134,11 @@ export const AdminLayout = ({ children, activeTab, setActiveTab, onLogout }: Adm
       <div className="p-6 border-t border-white/5 bg-black/20">
         <div className="mb-6 px-2">
           <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
-            <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">
-              AT
+            <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary text-xs font-bold uppercase">
+              {user?.email?.charAt(0) || 'A'}
             </div>
             <div className="flex flex-col overflow-hidden">
-              <span className="text-xs font-bold text-white truncate">Ahmad Tariq</span>
+              <span className="text-xs font-bold text-white truncate">{user?.email?.split('@')[0] || 'Administrator'}</span>
               <span className="text-[10px] text-muted-foreground truncate">System Administrator</span>
             </div>
           </div>
@@ -169,10 +170,8 @@ export const AdminLayout = ({ children, activeTab, setActiveTab, onLogout }: Adm
             <span className="font-bold tracking-tight text-white">PROTASK</span>
           </div>
           <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-white">
-                <Menu className="h-6 w-6" />
-              </Button>
+            <SheetTrigger render={<Button variant="ghost" size="icon" className="text-white" />}>
+              <Menu className="h-6 w-6" />
             </SheetTrigger>
             <SheetContent side="left" className="p-0 border-r-white/5 w-72">
               <SidebarContent />
