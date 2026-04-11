@@ -19,47 +19,50 @@ export default function App() {
   const [activeTab, setActiveTab] = React.useState('dashboard');
   const [user, setUser] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
+  const [authError, setAuthError] = React.useState<string | null>(null);
+
+  const verifyAdminRole = async (sessionUser: any) => {
+    try {
+      const { data: profile, error: profileError } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', sessionUser.id)
+        .single();
+
+      if (profileError || profile?.role !== 'admin') {
+        console.warn('Access denied: Not an admin', profileError);
+        await supabase.auth.signOut();
+        setUser(null);
+        setAuthError('Access denied. Only administrators can access this panel.');
+        return false;
+      }
+
+      setUser(sessionUser);
+      setAuthError(null);
+      return true;
+    } catch (err) {
+      console.error('Role verification error:', err);
+      await supabase.auth.signOut();
+      setUser(null);
+      setAuthError('Authentication failed. Please try again.');
+      return false;
+    }
+  };
 
   React.useEffect(() => {
     // Check active session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        // Verify admin role
-        supabase
-          .from('users')
-          .select('role')
-          .eq('id', session.user.id)
-          .single()
-          .then(({ data: profile }) => {
-            if (profile?.role === 'admin') {
-              setUser(session.user);
-            } else {
-              supabase.auth.signOut();
-            }
-            setLoading(false);
-          });
+        verifyAdminRole(session.user).then(() => setLoading(false));
       } else {
         setLoading(false);
       }
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
-        // Verify admin role again on change
-        supabase
-          .from('users')
-          .select('role')
-          .eq('id', session.user.id)
-          .single()
-          .then(({ data: profile }) => {
-            if (profile?.role === 'admin') {
-              setUser(session.user);
-            } else {
-              setUser(null);
-              supabase.auth.signOut();
-            }
-          });
+        await verifyAdminRole(session.user);
       } else {
         setUser(null);
       }
@@ -85,7 +88,7 @@ export default function App() {
   }
 
   if (!user) {
-    return <LoginView onLoginSuccess={setUser} />;
+    return <LoginView onLoginSuccess={setUser} externalError={authError} />;
   }
 
   const renderContent = () => {

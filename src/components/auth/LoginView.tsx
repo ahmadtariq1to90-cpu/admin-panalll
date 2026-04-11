@@ -6,7 +6,8 @@ import {
   ArrowRight, 
   ShieldCheck,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Chrome
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,13 +18,40 @@ import { toast } from 'sonner';
 
 interface LoginViewProps {
   onLoginSuccess: (user: any) => void;
+  externalError?: string | null;
 }
 
-export const LoginView = ({ onLoginSuccess }: LoginViewProps) => {
+export const LoginView = ({ onLoginSuccess, externalError }: LoginViewProps) => {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [loading, setLoading] = React.useState(false);
+  const [googleLoading, setGoogleLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+
+  // Sync external error
+  React.useEffect(() => {
+    if (externalError) {
+      setError(externalError);
+    }
+  }, [externalError]);
+
+  const handleGoogleLogin = async () => {
+    setGoogleLoading(true);
+    setError(null);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin
+        }
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      setError(err.message || 'Google login failed');
+      toast.error('Google login failed');
+      setGoogleLoading(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,10 +189,11 @@ export const LoginView = ({ onLoginSuccess }: LoginViewProps) => {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="pt-4 pb-8">
+            <CardFooter className="flex flex-col gap-4 pt-4 pb-8">
               <Button 
+                type="submit"
                 className="w-full h-14 gap-3 text-base font-bold rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_10px_20px_rgba(var(--primary),0.2)] transition-all hover:scale-[1.02] active:scale-[0.98]" 
-                disabled={loading}
+                disabled={loading || googleLoading}
               >
                 {loading ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
@@ -173,6 +202,32 @@ export const LoginView = ({ onLoginSuccess }: LoginViewProps) => {
                     <ShieldCheck className="h-5 w-5" />
                     Authorize Access
                     <ArrowRight className="ml-1 h-4 w-4" />
+                  </>
+                )}
+              </Button>
+
+              <div className="relative w-full py-2">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-white/10" />
+                </div>
+                <div className="relative flex justify-center text-[10px] uppercase tracking-widest">
+                  <span className="bg-[#0d0d0d] px-4 text-muted-foreground/40">Or continue with</span>
+                </div>
+              </div>
+
+              <Button 
+                type="button"
+                variant="outline"
+                onClick={handleGoogleLogin}
+                className="w-full h-14 gap-3 text-base font-bold rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-white transition-all hover:scale-[1.02] active:scale-[0.98]" 
+                disabled={loading || googleLoading}
+              >
+                {googleLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <>
+                    <Chrome className="h-5 w-5" />
+                    Login with Google
                   </>
                 )}
               </Button>
