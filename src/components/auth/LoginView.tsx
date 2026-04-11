@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { motion } from 'motion/react';
-import { supabase } from '@/src/lib/supabase';
+import { supabase, isUsingFallback } from '@/src/lib/supabase';
 import { toast } from 'sonner';
 
 interface LoginViewProps {
@@ -39,52 +39,36 @@ export const LoginView = ({ onLoginSuccess, externalError }: LoginViewProps) => 
     setLoading(true);
     setError(null);
 
-    console.log('Attempting login for:', email);
+    console.log('Attempting sign-in for:', email);
 
     try {
-      const { data: { user }, error: authError } = await supabase.auth.signInWithPassword({
+      const { data: { user: authUser }, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (authError) {
-        console.error('Auth Error:', authError);
+        console.error('Sign-in error:', authError);
         throw authError;
       }
 
-      if (user) {
-        console.log('User authenticated, checking profile role...');
-        // Check if user is admin
-        const { data: profile, error: profileError } = await supabase
-          .from('users')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-
-        if (profileError) {
-          console.error('Profile Error:', profileError);
-          await supabase.auth.signOut();
-          throw new Error('Access denied. Administrator profile not found.');
-        }
-
-        if (profile?.role !== 'admin') {
-          console.warn('User is not an admin:', profile?.role);
-          await supabase.auth.signOut();
-          throw new Error('Access denied. Only administrators can access this panel.');
-        }
-
-        onLoginSuccess(user);
-        toast.success('Welcome back, Admin!', {
-          description: 'Successfully logged into the ProTask Admin Panel.',
-        });
+      if (authUser) {
+        console.log('Sign-in successful, waiting for role verification...');
+        // We don't call onLoginSuccess here anymore, 
+        // because App.tsx's onAuthStateChange will handle it.
+        // But we keep loading true until the app state changes or an error occurs.
+        
+        // Add a safety timeout to stop loading if nothing happens
+        setTimeout(() => {
+          setLoading(false);
+        }, 15000);
       }
     } catch (err: any) {
-      console.error('Login Catch Block:', err);
+      console.error('Login process failed:', err);
       setError(err.message || 'An unexpected error occurred');
       toast.error('Login failed', {
         description: err.message || 'Please check your credentials and try again.',
       });
-    } finally {
       setLoading(false);
     }
   };
@@ -113,6 +97,12 @@ export const LoginView = ({ onLoginSuccess, externalError }: LoginViewProps) => 
           </CardHeader>
           <form onSubmit={handleLogin}>
             <CardContent className="space-y-4">
+              {isUsingFallback && (
+                <div className="flex items-center gap-3 rounded-lg bg-amber-50 p-3 text-[10px] font-bold text-amber-700 border border-amber-200 uppercase tracking-wider">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  Warning: Using Fallback Credentials. Configure VITE_SUPABASE_URL/KEY in settings.
+                </div>
+              )}
               {error && (
                 <div className="flex items-center gap-3 rounded-lg bg-destructive/10 p-3 text-sm font-medium text-destructive border border-destructive/20">
                   <AlertCircle className="h-4 w-4 shrink-0" />

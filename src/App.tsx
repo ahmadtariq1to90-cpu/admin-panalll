@@ -22,31 +22,122 @@ export default function App() {
   const [loading, setLoading] = React.useState(true);
   const [authError, setAuthError] = React.useState<string | null>(null);
 
-  const verifyAdminRole = async (sessionUser: any) => {
+  const [verifying, setVerifying] = React.useState(false);
+  const [authStatus, setAuthStatus] = React.useState<string>('Initializing...');
+
+  const [showBypass, setShowBypass] = React.useState(false);
+
+  const verifyAdminRole = async (sessionUser: any, retryCount = 0): Promise<boolean> => {
+    const OWNER_EMAIL = 'ahmadtariq1to90@gmail.com';
+    const isOwner = sessionUser.email?.toLowerCase() === OWNER_EMAIL.toLowerCase();
+
+    if (verifying && retryCount === 0) {
+      console.log('Verification already in progress, skipping...');
+      return false;
+    }
+    
+    setVerifying(true);
+    
+    if (isOwner && !showBypass) {
+      setTimeout(() => setShowBypass(true), 5000);
+    }
+    
+    // Check metadata first - much faster as it's already in the sessionUser object
+    const metadataRole = sessionUser.app_metadata?.role || sessionUser.user_metadata?.role;
+    
+    if (metadataRole === 'admin') {
+      console.log('Admin role verified via metadata');
+      setUser(sessionUser);
+      setAuthError(null);
+      setVerifying(false);
+      return true;
+    }
+
+    // If owner and metadata check failed, we still try the DB but with a fallback
+    setAuthStatus(retryCount > 0 ? `Retrying database check (Attempt ${retryCount + 1}/3)...` : 'Querying security database...');
+    console.log(`Querying "users" table for: ${sessionUser.email} (Attempt ${retryCount + 1})`);
+
     try {
-      const { data: profile, error: profileError } = await supabase
+      const profilePromise = supabase
         .from('users')
         .select('role')
         .eq('id', sessionUser.id)
-        .single();
+        .limit(1)
+        .maybeSingle();
 
-      if (profileError || profile?.role !== 'admin') {
-        console.warn('Access denied: Not an admin', profileError);
+      const timeoutDuration = 30000; // Increased to 30s
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database response delayed')), timeoutDuration)
+      );
+
+      const { data: profile, error: profileError } = await Promise.race([
+        profilePromise,
+        timeoutPromise
+      ]) as any;
+
+      if (profileError) {
+        throw profileError;
+      }
+
+      if (!profile) {
+        console.warn('No profile record found for ID:', sessionUser.id);
+        
+        if (isOwner) {
+          console.log('Owner bypass: Profile missing but granting access');
+          setUser(sessionUser);
+          setAuthError(null);
+          return true;
+        }
+        
+        throw new Error('Access denied. No administrator profile found.');
+      }
+
+      if (profile.role !== 'admin') {
+        console.warn('Access denied: Unauthorized role:', profile.role);
+        if (isOwner) {
+          console.log('Owner bypass: Role mismatch but granting access');
+          setUser(sessionUser);
+          setAuthError(null);
+          return true;
+        }
         await supabase.auth.signOut();
         setUser(null);
-        setAuthError('Access denied. Only administrators can access this panel.');
+        setAuthError('Access denied. Administrator privileges required.');
         return false;
       }
 
+      console.log('Admin role verified via database');
       setUser(sessionUser);
       setAuthError(null);
       return true;
-    } catch (err) {
-      console.error('Role verification error:', err);
-      await supabase.auth.signOut();
-      setUser(null);
-      setAuthError('Authentication failed. Please try again.');
+    } catch (err: any) {
+      // SILENT BYPASS FOR OWNER ON ANY ERROR
+      if (isOwner) {
+        console.log('Owner bypass: Database error/timeout, granting emergency access');
+        setUser(sessionUser);
+        setAuthError(null);
+        return true;
+      }
+
+      console.error(`Verification attempt ${retryCount + 1} failed:`, err.message);
+
+      if (retryCount < 2 && (err.message.includes('delayed') || err.message.includes('unreachable') || err.message.includes('FetchError'))) {
+        console.log('Retrying database connection...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        return verifyAdminRole(sessionUser, retryCount + 1);
+      }
+
+      if (!err.message.includes('delayed')) {
+        await supabase.auth.signOut();
+        setUser(null);
+      }
+      
+      setAuthError(err.message || 'Security verification failed');
       return false;
+    } finally {
+      if (retryCount === 0 || !user) {
+        setVerifying(false);
+      }
     }
   };
 
@@ -54,47 +145,38 @@ export default function App() {
     let mounted = true;
 
     const initAuth = async () => {
-      // Safety timeout to prevent infinite loading
+      console.log('Starting auth initialization...');
+      setAuthStatus('Connecting to security core...');
+      
+      // Safety timeout to prevent infinite loading (increased for retries)
       const timeoutId = setTimeout(() => {
         if (mounted && loading) {
           console.warn('Auth initialization timed out, forcing loading state to false');
           setLoading(false);
         }
-      }, 5000);
+      }, 60000);
 
       try {
-        console.log('Initializing auth session...');
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
         
-        if (sessionError) {
-          console.error('Session error:', sessionError);
-          setAuthError('Session retrieval failed: ' + sessionError.message);
-          setLoading(false);
-          clearTimeout(timeoutId);
+        if (authError) {
+          console.log('No active session or user found:', authError.message);
+          if (mounted) setLoading(false);
           return;
         }
 
-        if (session?.user) {
-          console.log('Session found for user:', session.user.email);
-          const isAdmin = await verifyAdminRole(session.user);
-          if (mounted) {
-            if (!isAdmin) {
-              console.warn('User is not an admin, redirecting to login');
-            }
-            setLoading(false);
-          }
-        } else {
-          console.log('No active session found');
-          if (mounted) setLoading(false);
+        if (authUser) {
+          console.log('Authenticated user found:', authUser.email);
+          await verifyAdminRole(authUser);
         }
       } catch (err: any) {
-        console.error('Auth initialization error:', err);
-        if (mounted) {
-          setAuthError('Failed to initialize authentication: ' + (err.message || 'Unknown error'));
-          setLoading(false);
-        }
+        console.error('Unexpected auth init error:', err);
+        if (mounted) setAuthError('System initialization failed');
       } finally {
-        clearTimeout(timeoutId);
+        if (mounted) {
+          setLoading(false);
+          clearTimeout(timeoutId);
+        }
       }
     };
 
@@ -102,11 +184,15 @@ export default function App() {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state change event:', event);
-      if (session?.user) {
+      console.log('Auth state change detected:', event);
+      
+      if (event === 'SIGNED_IN' && session?.user) {
         await verifyAdminRole(session.user);
-      } else {
+      } else if (event === 'SIGNED_OUT') {
         setUser(null);
+        setAuthError(null);
+      } else if (session?.user && !user && !verifying) {
+        await verifyAdminRole(session.user);
       }
     });
 
@@ -132,8 +218,29 @@ export default function App() {
           </div>
           <div className="text-center space-y-2">
             <p className="text-sm font-bold text-foreground uppercase tracking-[0.2em]">Initializing Admin OS</p>
-            <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest">Verifying security credentials...</p>
+            <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest">{authStatus}</p>
           </div>
+
+          {showBypass && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => {
+                const OWNER_EMAIL = 'ahmadtariq1to90@gmail.com';
+                supabase.auth.getUser().then(({ data: { user: authUser } }) => {
+                  if (authUser?.email === OWNER_EMAIL) {
+                    console.log('Manual bypass triggered by owner');
+                    setUser(authUser);
+                    setLoading(false);
+                  }
+                });
+              }}
+              className="mt-2 text-[10px] font-bold text-primary border-primary/20 hover:bg-primary/5 uppercase tracking-widest rounded-xl"
+            >
+              Administrative Override
+            </Button>
+          )}
+
           <Button 
             variant="ghost" 
             size="sm" 
