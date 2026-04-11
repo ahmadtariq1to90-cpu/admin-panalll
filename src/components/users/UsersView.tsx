@@ -14,7 +14,8 @@ import {
   UserPlus,
   Eye,
   History,
-  Ban
+  Ban,
+  TrendingUp
 } from 'lucide-react';
 import { 
   Table, 
@@ -45,20 +46,35 @@ import { supabase, isUsingFallback } from '@/src/lib/supabase';
 import { toast } from 'sonner';
 import { AlertCircle, RefreshCcw } from 'lucide-react';
 
+import { UserDetailView } from './UserDetailView';
+
 export const UsersView = () => {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [users, setUsers] = React.useState<User[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [selectedUser, setSelectedUser] = React.useState<User | null>(null);
+  const [sortBy, setSortBy] = React.useState<'newest' | 'oldest' | 'highest_balance' | 'lowest_balance'>('newest');
+  const [dateFilter, setDateFilter] = React.useState<'all' | '7days' | '30days' | 'custom'>('all');
 
   const fetchUsers = async () => {
     setLoading(true);
     setError(null);
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .order('created_at', { ascending: false });
+      let query = supabase.from('users').select('*');
+
+      // Apply date filters
+      if (dateFilter === '7days') {
+        const date = new Date();
+        date.setDate(date.getDate() - 7);
+        query = query.gte('created_at', date.toISOString());
+      } else if (dateFilter === '30days') {
+        const date = new Date();
+        date.setDate(date.getDate() - 30);
+        query = query.gte('created_at', date.toISOString());
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setUsers(data || []);
@@ -73,12 +89,46 @@ export const UsersView = () => {
 
   React.useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [dateFilter]);
 
-  const filteredUsers = users.filter(user => 
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (user.full_name && user.full_name.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredAndSortedUsers = React.useMemo(() => {
+    let result = users.filter(user => 
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (user.full_name && user.full_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (user.first_name && user.first_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (user.last_name && user.last_name.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+
+    switch (sortBy) {
+      case 'newest':
+        result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        break;
+      case 'oldest':
+        result.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        break;
+      case 'highest_balance':
+        result.sort((a, b) => b.balance - a.balance);
+        break;
+      case 'lowest_balance':
+        result.sort((a, b) => a.balance - b.balance);
+        break;
+    }
+
+    return result;
+  }, [users, searchTerm, sortBy]);
+
+  if (selectedUser) {
+    return (
+      <UserDetailView 
+        user={selectedUser} 
+        onBack={() => setSelectedUser(null)} 
+        onUpdate={(updatedUser) => {
+          setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
+          setSelectedUser(updatedUser);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="space-y-10">
@@ -142,11 +192,36 @@ export const UsersView = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" className="h-10 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-white hover:bg-white/5 border border-white/5">
-            <Filter className="h-3 w-3 mr-2" />
-            Advanced Filters
-          </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-10 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-white hover:bg-white/5 border border-white/5">
+                <Filter className="h-3 w-3 mr-2" />
+                Time: {dateFilter === 'all' ? 'All Time' : dateFilter === '7days' ? 'Last 7 Days' : 'Last 30 Days'}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48 bg-black border-white/10 text-white">
+              <DropdownMenuItem onClick={() => setDateFilter('all')} className="text-xs font-mono uppercase tracking-widest cursor-pointer">All Time</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDateFilter('7days')} className="text-xs font-mono uppercase tracking-widest cursor-pointer">Last 7 Days</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDateFilter('30days')} className="text-xs font-mono uppercase tracking-widest cursor-pointer">Last 30 Days</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-10 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-white hover:bg-white/5 border border-white/5">
+                <TrendingUp className="h-3 w-3 mr-2" />
+                Sort: {sortBy.replace('_', ' ')}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 bg-black border-white/10 text-white">
+              <DropdownMenuItem onClick={() => setSortBy('newest')} className="text-xs font-mono uppercase tracking-widest cursor-pointer">Newest First</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy('oldest')} className="text-xs font-mono uppercase tracking-widest cursor-pointer">Oldest First</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy('highest_balance')} className="text-xs font-mono uppercase tracking-widest cursor-pointer">Highest Balance</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy('lowest_balance')} className="text-xs font-mono uppercase tracking-widest cursor-pointer">Lowest Balance</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <Button className="h-10 bg-primary text-black hover:bg-primary/90 text-[10px] font-bold uppercase tracking-widest px-6">
             <Mail className="h-3 w-3 mr-2" />
             Broadcast
@@ -182,15 +257,19 @@ export const UsersView = () => {
                     </TableCell>
                   </TableRow>
                 ))
-              ) : filteredUsers.length === 0 ? (
+              ) : filteredAndSortedUsers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-60 text-center text-muted-foreground/40 font-mono text-xs uppercase tracking-widest">
                     No personnel records found matching criteria
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredUsers.map((user) => (
-                  <TableRow key={user.id} className="border-white/5 hover:bg-white/[0.02] transition-colors group">
+                filteredAndSortedUsers.map((user) => (
+                  <TableRow 
+                    key={user.id} 
+                    className="border-white/5 hover:bg-white/[0.02] transition-colors group cursor-pointer"
+                    onClick={() => setSelectedUser(user)}
+                  >
                     <TableCell className="py-4">
                       <div className="flex items-center gap-4">
                         <div className="relative">
@@ -246,7 +325,13 @@ export const UsersView = () => {
                         <DropdownMenuContent align="end" className="w-56 bg-black border-white/10 text-white">
                           <DropdownMenuLabel className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60">Personnel Actions</DropdownMenuLabel>
                           <DropdownMenuSeparator className="bg-white/5" />
-                          <DropdownMenuItem className="gap-3 text-xs font-medium focus:bg-white/5 focus:text-primary cursor-pointer">
+                          <DropdownMenuItem 
+                            className="gap-3 text-xs font-medium focus:bg-white/5 focus:text-primary cursor-pointer"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedUser(user);
+                            }}
+                          >
                             <UserIcon className="h-4 w-4 opacity-60" /> View Profile
                           </DropdownMenuItem>
                           <DropdownMenuItem className="gap-3 text-xs font-medium focus:bg-white/5 focus:text-primary cursor-pointer">
@@ -270,7 +355,7 @@ export const UsersView = () => {
         </div>
         <div className="bg-black/40 border-t border-white/5 p-4 flex items-center justify-between">
           <p className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest">
-            Showing <span className="text-white font-bold">{filteredUsers.length}</span> of <span className="text-white font-bold">{users.length}</span> personnel records
+            Showing <span className="text-white font-bold">{filteredAndSortedUsers.length}</span> of <span className="text-white font-bold">{users.length}</span> personnel records
           </p>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" className="h-8 w-8 p-0 border border-white/5 text-muted-foreground/40 hover:text-white hover:bg-white/5" disabled>

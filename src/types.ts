@@ -4,10 +4,29 @@ export interface User {
   id: string;
   email: string;
   full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  phone_country: string | null;
+  phone_number: string | null;
+  country: string | null;
+  city: string | null;
+  postal_code: string | null;
+  zip_code: string | null;
+  date_of_birth: string | null;
+  birthday: string | null;
+  gender: string | null;
+  avatar_url: string | null;
+  profile_image: string | null;
+  "profile-image": string | null;
+  profile_image_url: string | null;
+  profile_pic: string | null;
   role: UserRole;
   balance: number;
   referral_code: string;
   referred_by: string | null;
+  total_tasks_completed: number;
+  total_withdraw: number;
+  referral_earnings: number;
   created_at: string;
 }
 
